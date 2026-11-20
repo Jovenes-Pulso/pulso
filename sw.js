@@ -1,5 +1,5 @@
 /* Pulso: service worker. Cambia VERSION cada vez que publiques cambios. */
-const VERSION = 'pulso-v3';
+const VERSION = 'pulso-v4';
 const SHELL = ['./', './index.html', './config.js', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
