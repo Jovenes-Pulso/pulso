@@ -1,0 +1,2412 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#172042">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Pulso">
+<meta name="description" content="Control de asistencia del grupo de jóvenes">
+<title>Pulso: asistencia del grupo</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gabarito:wght@600;700;800&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F7; --surface:#FFFFFF; --field:#F6F7FB;
+  --ink:#172042; --ink-2:#535C7E; --ink-3:#868DA8; --line:#DDE2EE;
+  --hl:#FFE14D; --hl-soft:#FFF5BF;
+  --alert:#C93B34; --alert-soft:#FCE5E3;
+  --ok:#1C7F54; --ok-soft:#DDF2E8;
+  --r-lg:22px; --r-md:14px; --r-sm:10px;
+  --tab-h:66px; --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+  --display:'Gabarito',ui-rounded,system-ui,sans-serif;
+  --body:'Onest',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:var(--body);background:var(--bg);color:var(--ink);font-size:16px;line-height:1.45;min-height:100dvh;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:contain}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;text-align:inherit}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px;border-radius:10px}
+.num{font-variant-numeric:tabular-nums}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- shell ---------- */
+.app{max-width:560px;margin:0 auto;padding:0 16px calc(var(--tab-h) + var(--safe-b) + 28px)}
+.top{position:sticky;top:0;z-index:6;background:var(--bg);padding:calc(var(--safe-t) + 14px) 0 10px;display:flex;align-items:center;gap:8px;min-height:64px}
+.top h1{font-family:var(--display);font-weight:800;font-size:clamp(21px,6.4vw,27px);line-height:1.12;letter-spacing:-.015em;flex:1;min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.top .sub{display:block;font-family:var(--body);font-size:13px;font-weight:500;color:var(--ink-2);letter-spacing:0;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;flex:none;color:var(--ink)}
+.icon-btn:active{background:var(--line)}
+.icon-btn.solid{background:var(--ink);color:#fff}
+.icon-btn svg{width:22px;height:22px}
+
+h2{font-family:var(--display);font-weight:700;font-size:19px;line-height:1.2;letter-spacing:-.01em}
+.section{margin-top:26px}
+.section > h2{margin:0 2px 10px}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 2px 10px}
+.link{font-weight:600;font-size:14px;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
+.muted{color:var(--ink-2)}
+.small{font-size:13.5px}
+.panel{background:var(--surface);border-radius:var(--r-lg);padding:16px}
+.panel + .panel{margin-top:10px}
+.stack > * + *{margin-top:10px}
+
+/* ---------- tabs ---------- */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--surface);border-top:1px solid var(--line);padding:4px 6px calc(4px + var(--safe-b))}
+.tabs-in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);align-items:end}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11.5px;font-weight:500;color:var(--ink-3);padding:7px 0 5px;border-radius:12px}
+.tab svg{width:24px;height:24px}
+.tab[aria-current="page"]{color:var(--ink)}
+.tab[aria-current="page"] svg{stroke-width:2.3}
+.tab.cta .disc{width:56px;height:56px;margin-top:-26px;border-radius:50%;background:var(--hl);color:var(--ink);display:grid;place-items:center;border:4px solid var(--bg);box-shadow:0 1px 0 var(--line)}
+.tab.cta .disc svg{width:26px;height:26px;stroke-width:2.4}
+.tab.cta{color:var(--ink)}
+
+/* ---------- buttons & fields ---------- */
+.btn{min-height:48px;padding:0 20px;border-radius:999px;font-weight:600;font-size:15.5px;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
+.btn svg{width:20px;height:20px}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.hl{background:var(--hl);color:var(--ink)}
+.btn.ghost{border:1.5px solid var(--line);background:var(--surface)}
+.btn.danger{color:var(--alert);border:1.5px solid var(--alert-soft);background:var(--surface)}
+.btn.block{width:100%}
+.btn:active{transform:scale(.98)}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap}
+.row-btns .btn{flex:1}
+
+.field{display:block;margin-top:14px}
+.field > span:first-child{display:block;font-size:13.5px;font-weight:600;color:var(--ink-2);margin:0 0 6px 2px}
+.input,select.input,textarea.input{width:100%;min-height:50px;border:1.5px solid var(--line);background:var(--field);border-radius:var(--r-md);padding:12px 14px;font-size:16px;outline:none;appearance:none}
+textarea.input{min-height:90px;resize:vertical}
+select.input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%23535C7E' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:40px}
+.input:focus{border-color:var(--ink);background:#fff}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.hint{font-size:13px;color:var(--ink-3);margin:6px 2px 0}
+
+.search{position:relative}
+.search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:20px;height:20px;color:var(--ink-3);pointer-events:none}
+.search .input{padding-left:44px;background:var(--surface)}
+
+/* chips */
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:none;margin:0 -16px;padding-left:16px;padding-right:16px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;min-height:38px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);font-size:14px;font-weight:600;color:var(--ink-2);display:inline-flex;align-items:center;gap:6px}
+.chip .c{font-weight:500;color:var(--ink-3)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip[aria-pressed="true"] .c{color:#C6CBE0}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.b-constante{background:var(--ok-soft);color:var(--ok)}
+.b-ocasional{background:#E8EBF4;color:var(--ink-2)}
+.b-riesgo{background:var(--alert-soft);color:var(--alert)}
+.b-nuevo{background:var(--hl-soft);color:#6B5800}
+.b-inactivo{background:transparent;color:var(--ink-3);box-shadow:inset 0 0 0 1.5px var(--line)}
+
+/* avatar */
+.av{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:16px;color:var(--ink);overflow:hidden;background:#DCE3F7}
+.av{position:relative}
+.av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.av.lg{width:84px;height:84px;font-size:30px}
+.av.ph{background:transparent;box-shadow:inset 0 0 0 2px var(--line);border:0;color:var(--ink-3)}
+
+/* pulse strip */
+.strip{display:flex;gap:3px;align-items:flex-end;height:16px}
+.strip i{width:6px;height:16px;border-radius:2px;background:var(--line)}
+.strip i.y{background:var(--ink)}
+.strip i.n{background:transparent;box-shadow:inset 0 0 0 1px var(--line);height:6px}
+
+/* list rows */
+.list{background:var(--surface);border-radius:var(--r-lg);overflow:hidden}
+.item{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:68px;position:relative;width:100%}
+.item + .item::before{content:"";position:absolute;top:0;left:70px;right:0;height:1px;background:var(--line)}
+.item:active{background:var(--field)}
+.item .body{flex:1;min-width:0}
+.item .name{font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .meta{font-size:13.5px;color:var(--ink-2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .end{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none}
+.item .pct{font-family:var(--display);font-weight:700;font-size:18px}
+.item .line2{display:flex;align-items:center;gap:10px;margin-top:6px}
+.item .meta.wrap{white-space:normal}
+.item .wa{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--ok-soft);color:var(--ok);flex:none}
+.item .wa svg{width:22px;height:22px}
+.chev{width:20px;height:20px;color:var(--ink-3);flex:none}
+
+/* ---------- home ---------- */
+.hero{background:var(--ink);color:#fff;border-radius:var(--r-lg);padding:18px 16px 14px;margin-top:4px}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.hero-figure{font-family:var(--display);font-weight:800;font-size:54px;line-height:.95;letter-spacing:-.03em}
+.hero-cap{font-size:14.5px;color:#C6CBE0;margin-top:6px;max-width:30ch}
+.hero-cap b{color:#fff;font-weight:600}
+.delta{font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.1);white-space:nowrap}
+.hero svg.chart{width:100%;height:auto;display:block;margin-top:16px}
+.hero .axis{display:flex;justify-content:space-between;font-size:12px;color:#9EA5C4;margin-top:6px}
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.quick .btn{width:100%}
+
+.comp{display:flex;height:14px;border-radius:999px;overflow:hidden;gap:2px;margin:4px 0 14px}
+.comp span{display:block;height:100%}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+.legend a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 2px;border-bottom:1px solid var(--line)}
+.legend a b{font-family:var(--display);font-size:17px}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:8px;flex:none}
+
+.meter{height:10px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:12px}
+.meter > span{display:block;height:100%;background:var(--ink);border-radius:999px}
+.stat-line{font-size:15.5px;line-height:1.45}
+.stat-line b{font-family:var(--display);font-weight:700;font-size:20px}
+
+.bars-h .r{display:grid;grid-template-columns:minmax(64px,36%) 1fr 54px;align-items:center;gap:10px;padding:6px 0;font-size:14px}
+.bars-h .track{height:12px;background:var(--field);border-radius:999px;overflow:hidden}
+.bars-h .track span{display:block;height:100%;background:var(--ink);border-radius:999px}
+.bars-h .v{text-align:right;font-weight:600;white-space:nowrap}
+.bars-h .lb{line-height:1.25;overflow-wrap:anywhere}
+.bars-h .lb small{display:block;font-size:12px;color:var(--ink-3);margin-top:1px}
+
+.tema{display:flex;gap:12px;align-items:center;padding:10px 0}
+.tema + .tema{border-top:1px solid var(--line)}
+.tema .n{font-family:var(--display);font-weight:800;font-size:24px;width:44px;flex:none}
+.tema .t{font-weight:600;line-height:1.3}
+
+/* ---------- roster ---------- */
+.roster-bar{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(var(--safe-t) + 8px) 0 10px;margin-top:-6px}
+.count-line{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:2px 2px 10px}
+.count-line .big{font-family:var(--display);font-weight:800;font-size:34px;letter-spacing:-.02em;line-height:1}
+.count-line .of{font-size:14px;color:var(--ink-2)}
+.roster{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.tile{display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--r-md);background:var(--surface);border:2px solid transparent;min-height:66px;width:100%;transition:background-color .12s ease,border-color .12s ease}
+.tile .av{width:40px;height:40px;font-size:15px;position:relative}
+.tile .tn{flex:1;min-width:0;line-height:1.2}
+.tile .tn b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-weight:600;font-size:15px;overflow:hidden;word-break:break-word}
+.tile .tn small{display:block;font-size:12.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.tile[aria-pressed="true"]{background:var(--hl);border-color:var(--ink)}
+.tile[aria-pressed="true"] .av{background:var(--ink)!important;color:var(--hl)}
+.tile[aria-pressed="true"] .av img{opacity:.0}
+.tile[aria-pressed="true"] .av::after{content:"";position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFE14D' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/22px no-repeat}
+.tile[aria-pressed="true"] .av span{visibility:hidden}
+.tile[aria-pressed="true"] .tn small{color:var(--ink)}
+.tile:active{transform:scale(.97)}
+.more-toggle{margin-top:14px}
+
+/* ---------- profile ---------- */
+.profile{display:flex;gap:16px;align-items:center;margin-top:4px}
+.profile h2{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.profile .muted{margin-top:4px;font-size:14.5px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.kpi{background:var(--surface);border-radius:var(--r-md);padding:14px}
+.kpi .k{font-family:var(--display);font-weight:800;font-size:30px;letter-spacing:-.02em;line-height:1}
+.kpi .l{font-size:13.5px;color:var(--ink-2);margin-top:6px;line-height:1.3}
+.kpi.dark{background:var(--ink);color:#fff}
+.kpi.dark .l{color:#C6CBE0}
+.months .m{display:grid;grid-template-columns:76px 1fr auto;gap:10px;align-items:center;padding:8px 0}
+.months .m + .m{border-top:1px solid var(--line)}
+.months .m .lbl{font-size:14px;font-weight:600;text-transform:capitalize}
+.months .dots{display:flex;gap:6px;flex-wrap:wrap}
+.months .dots i{width:18px;height:18px;border-radius:6px;background:var(--line)}
+.months .dots i.y{background:var(--ink)}
+.months .dots i.n{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
+.months .c{font-size:13px;color:var(--ink-2)}
+.hist .h{display:flex;gap:12px;align-items:center;padding:10px 0}
+.hist .h + .h{border-top:1px solid var(--line)}
+.hist .mark{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex:none;background:var(--line)}
+.hist .mark.y{background:var(--ink);color:var(--hl)}
+.hist .mark svg{width:16px;height:16px}
+.hist .t{flex:1;min-width:0}
+.hist .t b{display:block;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist .t small{font-size:13px;color:var(--ink-2)}
+.notice{background:var(--hl-soft);border-radius:var(--r-md);padding:14px;font-size:14.5px;line-height:1.45}
+.notice.alert{background:var(--alert-soft)}
+.notice b{font-weight:600}
+
+/* ---------- classes ---------- */
+.month-h{font-family:var(--display);font-weight:700;font-size:16px;color:var(--ink-2);margin:22px 4px 8px;text-transform:capitalize}
+.date-block{width:46px;flex:none;text-align:center;line-height:1}
+.date-block b{display:block;font-family:var(--display);font-weight:800;font-size:24px}
+.date-block small{display:block;font-size:12px;color:var(--ink-2);margin-top:3px;text-transform:capitalize}
+.cnt{font-family:var(--display);font-weight:700;font-size:20px}
+.mini{width:54px;height:6px;background:var(--line);border-radius:999px;overflow:hidden}
+.mini span{display:block;height:100%;background:var(--ink)}
+.people{display:flex;flex-wrap:wrap;gap:8px}
+.person{display:inline-flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border-radius:999px;background:var(--surface);font-size:14px;font-weight:500}
+.person .av{width:30px;height:30px;font-size:12px}
+
+/* ---------- import ---------- */
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;border:2px dashed var(--line);border-radius:var(--r-md);padding:20px 14px;background:var(--field);cursor:pointer;width:100%}
+.drop svg{width:28px;height:28px;color:var(--ink-2)}
+.drop b{font-weight:600}
+.drop.ok{border-style:solid;border-color:var(--ink);background:#fff}
+.map{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;margin-top:12px;font-size:14px}
+.map select.input{min-height:42px;padding:8px 36px 8px 10px;font-size:14px}
+details summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--ink-2);margin-top:12px;list-style:none;display:flex;align-items:center;gap:6px}
+details summary::-webkit-details-marker{display:none}
+details summary svg{width:18px;height:18px;transition:transform .15s}
+details[open] summary svg{transform:rotate(90deg)}
+.radio{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1.5px solid var(--line);border-radius:var(--r-md);margin-top:8px;cursor:pointer}
+.radio input{margin-top:3px;accent-color:var(--ink);width:18px;height:18px}
+.radio:has(input:checked){border-color:var(--ink)}
+.menu .item{min-height:60px}
+.menu .ic{width:40px;height:40px;border-radius:12px;background:var(--field);display:grid;place-items:center;flex:none}
+.menu .ic svg{width:21px;height:21px}
+.menu .item + .item::before{left:66px}
+
+/* ---------- empty ---------- */
+.empty{text-align:center;padding:36px 20px}
+.empty .art{width:120px;margin:0 auto 18px}
+.empty h2{font-size:22px}
+.empty p{color:var(--ink-2);margin:8px auto 20px;max-width:32ch}
+.empty .stack{max-width:300px;margin:0 auto}
+
+/* ---------- sheet / toast ---------- */
+.scrim{position:fixed;inset:0;z-index:30;background:rgba(23,32,66,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:560px;border-radius:24px 24px 0 0;max-height:92dvh;overflow:auto;padding:8px 18px calc(20px + var(--safe-b));animation:sheet-up .22s cubic-bezier(.2,.8,.3,1)}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 12px}
+.sheet h2{font-size:22px;font-weight:800}
+.sheet .actions{display:flex;gap:10px;margin-top:22px}
+.sheet .actions .btn{flex:1}
+@keyframes sheet-up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+.toast{position:fixed;left:50%;bottom:calc(var(--tab-h) + var(--safe-b) + 14px);transform:translateX(-50%);z-index:40;background:var(--ink);color:#fff;padding:12px 18px;border-radius:999px;font-size:14.5px;font-weight:500;box-shadow:0 6px 24px rgba(23,32,66,.25);max-width:calc(100% - 32px);animation:sheet-up .2s ease-out}
+/* ---------- estadísticas ---------- */
+.vchart{width:100%;height:auto;display:block;overflow:visible}
+.vchart .bar{fill:#A9B1CC}
+.vchart .bar.hl,.vchart.solid .bar{fill:var(--ink)}
+.vchart .bar.sel{fill:var(--hl);stroke:var(--ink);stroke-width:1.5}
+.vchart .vl{font-size:11px;font-weight:600;fill:var(--ink);font-family:var(--body)}
+.vchart .xl{font-size:10.5px;fill:var(--ink-2);font-family:var(--body)}
+.vchart .avgl{stroke:var(--ink-2);stroke-width:1;stroke-dasharray:3 4}
+.tipcap{font-size:13.5px;color:var(--ink-2);margin-top:8px;min-height:20px;line-height:1.4}
+.kpis + .section{margin-top:22px}
+.alert-card{display:flex;gap:12px;align-items:flex-start;background:var(--alert-soft);border-radius:var(--r-md);padding:14px;margin-top:14px;color:var(--ink)}
+.alert-card .aic{width:36px;height:36px;border-radius:10px;background:#fff;color:var(--alert);display:grid;place-items:center;flex:none}
+.alert-card .aic svg{width:20px;height:20px}
+.alert-card b{font-weight:600}
+.alert-card p{font-size:14px;color:var(--ink-2);margin-top:2px}
+.alert-card .link{display:inline-block;margin-top:8px;color:var(--alert)}
+.nophone{display:inline-flex;align-items:center;gap:4px;color:var(--alert);font-weight:600}
+.nophone svg{width:14px;height:14px}
+.stats-link{display:flex;align-items:center;gap:12px;margin-top:10px;background:var(--surface);border-radius:var(--r-md);padding:14px 16px;font-weight:600}
+.stats-link .ic2{width:40px;height:40px;border-radius:12px;background:var(--ink);color:var(--hl);display:grid;place-items:center;flex:none}
+.stats-link .ic2 svg{width:22px;height:22px}
+.stats-link small{display:block;font-weight:400;color:var(--ink-2);font-size:13.5px}
+
+.syncbar{position:fixed;top:calc(var(--safe-t) + 8px);left:50%;transform:translateX(-50%);z-index:25;background:var(--ink);color:#fff;font-size:13px;font-weight:500;padding:7px 14px;border-radius:999px;box-shadow:0 4px 16px rgba(23,32,66,.2);max-width:calc(100% - 24px);text-align:center}
+.syncbar button{color:var(--hl);font-weight:700;margin-left:6px;text-decoration:underline}
+
+/* ---------- uso de servicios ---------- */
+.prov{display:flex;gap:12px;align-items:center;margin:0 2px}
+.prov h2{margin:0}
+.prov-mark{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:19px;flex:none}
+.prov-mark.sb{background:#DDF2E8;color:#1C7F54}
+.prov-mark.gh{background:var(--ink);color:#fff}
+.use + .use{margin-top:16px}
+.use-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14.5px}
+.use-top b{font-family:var(--display);font-weight:700;font-size:17px}
+.use .meter{margin-top:8px;height:10px}
+.meter.warn > span{background:#B7791F}
+.meter.alert > span{background:var(--alert)}
+.use-foot{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--ink-2);margin-top:6px}
+.lvl{font-weight:600;display:inline-flex;align-items:center;gap:5px}
+.lvl::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.lvl.ok{color:var(--ok)} .lvl.warn{color:#8A5A00} .lvl.alert{color:var(--alert)}
+.use-h{font-family:var(--display);font-weight:700;font-size:15.5px;margin:22px 0 10px}
+.use-t{width:100%;border-collapse:collapse;font-size:14px}
+.use-t th{text-align:left;font-weight:600;color:var(--ink-2);font-size:13px;padding:0 0 6px;border-bottom:1px solid var(--line)}
+.use-t td{padding:8px 0;border-bottom:1px solid var(--line)}
+.use-t .num{text-align:right}
+.use-t tr:last-child td{border-bottom:0}
+
+/* ---------- login ---------- */
+body.locked .tabs{display:none}
+body.locked .app{padding-bottom:24px}
+.login{min-height:100dvh;display:flex;flex-direction:column;justify-content:center;padding:calc(var(--safe-t) + 28px) 4px 28px;max-width:400px;margin:0 auto}
+.login .mark{width:64px;height:64px;border-radius:18px;background:var(--ink);display:grid;place-items:center;margin-bottom:22px}
+.login .mark svg{width:40px;height:40px;color:var(--hl)}
+.login h1{font-family:var(--display);font-weight:800;font-size:42px;letter-spacing:-.025em;line-height:1}
+.login .lead{color:var(--ink-2);margin-top:8px;font-size:16.5px}
+.login form{margin-top:24px}
+.login .foot{font-size:13.5px;color:var(--ink-3);margin-top:22px;line-height:1.45}
+.pw{position:relative;display:block}
+.pw .input{padding-right:54px}
+.pw .eye{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:46px;height:46px;display:grid;place-items:center;color:var(--ink-2);border-radius:12px}
+.pw .eye svg{width:22px;height:22px}
+.err{color:var(--alert);font-size:14px;font-weight:500;margin-top:10px;min-height:21px}
+.who{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.who .chip{min-height:48px;font-size:15.5px;padding:0 18px;color:var(--ink)}
+.acct{display:flex;align-items:center;gap:12px}
+.acct .av{background:var(--hl)}
+.b-superadmin{background:var(--ink);color:var(--hl)}
+.b-profesor{background:#E8EBF4;color:var(--ink-2)}
+.cred{background:var(--field);border-radius:var(--r-md);padding:6px 16px;margin-top:16px}
+.cred div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0}
+.cred div + div{border-top:1px solid var(--line)}
+.cred span{color:var(--ink-2);font-size:14px}
+.cred b{font-family:var(--display);font-weight:700;font-size:21px;letter-spacing:.04em;user-select:all}
+.gen{display:flex;gap:8px}
+.gen .input{flex:1}
+.gen .btn{min-height:50px;padding:0 14px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (min-width:600px){.roster{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<div class="app"><main id="view" aria-live="polite"></main></div>
+<nav class="tabs" aria-label="Secciones">
+  <div class="tabs-in">
+    <a class="tab" href="#/inicio" data-tab="inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>Inicio</a>
+    <a class="tab" href="#/jovenes" data-tab="jovenes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.8a3.3 3.3 0 0 1 0 6.4M18.5 14.8c1.7.7 2.7 2.4 3 5.2"/></svg>Jóvenes</a>
+    <a class="tab cta" href="#/lista" data-tab="lista"><span class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg></span>Tomar lista</a>
+    <a class="tab" href="#/clases" data-tab="clases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Clases</a>
+    <a class="tab" href="#/mas" data-tab="mas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Más</a>
+  </div>
+</nav>
+
+<script src="config.js"></script>
+<script>
+'use strict';
+/* Conexión: config.js define window.PULSO_CONFIG. Sin URL y llave, la app
+   funciona en modo local (todo en este dispositivo). */
+const CFG = Object.assign({supabaseUrl: '', supabaseKey: '', dominio: 'pulso.app'}, window.PULSO_CONFIG || {});
+const CLOUD = !!(CFG.supabaseUrl && CFG.supabaseKey);
+const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js';
+let sb = null;
+const loadScript = src => new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = rej; document.head.appendChild(el); });
+/* =========================================================
+   Pulso: control de asistencia del grupo de jóvenes
+   Capa de datos (DB) aislada: hoy guarda en el dispositivo,
+   después se reemplaza por la base de datos remota.
+   ========================================================= */
+
+/* ---------- utilidades ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const pad = n => String(n).padStart(2, '0');
+const isoOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const todayISO = () => isoOf(new Date());
+const dateOf = iso => new Date(iso + 'T12:00:00');
+const fmt = (iso, o) => iso ? dateOf(iso).toLocaleDateString('es-CO', o) : '';
+const fmtLong = iso => fmt(iso, {weekday:'long', day:'numeric', month:'long'});
+const fmtShort = iso => fmt(iso, {day:'numeric', month:'short'}).replace('.', '');
+const pctTxt = p => Math.round(p * 100) + ' %';
+const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+const plural = (n, s, p) => `${n} ${n === 1 ? s : (p || s + 's')}`;
+const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const fullName = s => [s.nombres, s.apellidos].map(x => (x || '').trim()).filter(Boolean).join(' ') || 'Sin nombre';
+const sinContacto = s => !s.placeholder && String(s.telefono || '').replace(/\D/g, '').length < 7;
+const shortName = s => { const n = (s.nombres || '').trim().split(/\s+/)[0] || ''; const a = (s.apellidos || '').trim().split(/\s+/)[0] || ''; return [n, a].filter(Boolean).join(' ') || 'Sin nombre'; };
+const initials = s => { const n = (s.nombres || '').trim(), a = (s.apellidos || '').trim(); return ((n[0] || '') + (a[0] || '')).toUpperCase() || '?'; };
+function ageOf(s) {
+  if (s.fechaNacimiento) {
+    const b = dateOf(s.fechaNacimiento), t = new Date();
+    let a = t.getFullYear() - b.getFullYear();
+    if (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--;
+    return a;
+  }
+  return s.edad ? Number(s.edad) : null;
+}
+const TINTS = ['#DCE3F7', '#E3DDF4', '#D9EEE6', '#F4E5D6', '#F2DCE3', '#DDEBF3'];
+function avatar(s, cls = '') {
+  if (s.placeholder) return `<div class="av ph ${cls}" aria-hidden="true"><span>?</span></div>`;
+  let h = 0; for (const ch of s.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const img = s.foto ? `<img src="${esc(s.foto)}" alt="" loading="lazy" onerror="this.remove()">` : '';
+  return `<div class="av ${cls}" style="background:${TINTS[h % TINTS.length]}" aria-hidden="true"><span>${esc(initials(s))}</span>${img}</div>`;
+}
+function waLink(phone, text) {
+  let d = String(phone || '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d.length === 10 && d[0] === '3') d = '57' + d;
+  return `https://wa.me/${d}?text=${encodeURIComponent(text)}`;
+}
+
+/* ---------- íconos ---------- */
+const I = {
+  back:'<path d="M15 5 8 12l7 7"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  edit:'<path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/>',
+  search:'<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/>',
+  chev:'<path d="m9 5 7 7-7 7"/>',
+  check:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  x:'<path d="M6 6l12 12M18 6 6 18"/>',
+  wa:'<path d="M4.5 19.5 5.6 16A8 8 0 1 1 8.4 18.6Z"/><path d="M9.2 8.6c.2-.5.5-.6.8-.6h.5c.2 0 .4.1.5.4l.7 1.6c.1.2 0 .5-.1.7l-.5.6c.6 1.1 1.5 2 2.6 2.6l.6-.5c.2-.2.5-.2.7-.1l1.6.7c.3.1.4.3.4.5v.5c0 .3-.1.6-.6.8-1.3.6-3.3.1-5-1.6s-2.2-3.7-1.6-5Z"/>',
+  phone:'<path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/>',
+  upload:'<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4.5 14v4.5A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5V14"/>',
+  download:'<path d="M12 4v11M7.5 10.5 12 15l4.5-4.5"/><path d="M4.5 14v4.5A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5V14"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.6 14H3.5a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10.2 3.4V3.5a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7h.1a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.4.8Z"/>',
+  trash:'<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/>',
+  spark:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>',
+  file:'<path d="M14 3.5H7A1.5 1.5 0 0 0 5.5 5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8Z"/><path d="M14 3.5V8h4.5"/>',
+  phoneApp:'<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>',
+  eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff:'<path d="M3 3l18 18M10.6 6.6A9.6 9.6 0 0 1 12 6.5c6 0 9.5 5.5 9.5 5.5a17 17 0 0 1-3 3.6M6.4 7.4A16.4 16.4 0 0 0 2.5 12S6 18.5 12 18.5a9.3 9.3 0 0 0 4.2-1M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  logout:'<path d="M14 4.5h3.5A1.5 1.5 0 0 1 19 6v12a1.5 1.5 0 0 1-1.5 1.5H14M10 16l-4-4 4-4M6 12h9"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.8a3.3 3.3 0 0 1 0 6.4M18.5 14.8c1.7.7 2.7 2.4 3 5.2"/>',
+  key:'<circle cx="8" cy="15" r="4"/><path d="m11 12 8.5-8.5M16 7l2.5 2.5M14 9l2 2"/>',
+  refresh:'<path d="M20 11a8 8 0 0 0-14.3-4.3L4 8.5M4 4v4.5h4.5M4 13a8 8 0 0 0 14.3 4.3l1.7-1.8M20 20v-4.5h-4.5"/>',
+  copy:'<rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5a1.5 1.5 0 0 0-1.5-1.5H5A1.5 1.5 0 0 0 3.5 5v9A1.5 1.5 0 0 0 5 15.5h3.5"/>',
+  chart:'<path d="M4 20h16"/><rect x="5.5" y="11" width="3" height="6.5" rx="1"/><rect x="10.5" y="6" width="3" height="11.5" rx="1"/><rect x="15.5" y="9" width="3" height="8.5" rx="1"/>',
+  phoneOff:'<path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/><path d="M3 3l18 18"/>',
+  gauge:'<path d="M4.5 17a8 8 0 1 1 15 0"/><path d="m12 13 3.5-4"/><circle cx="12" cy="13" r="1.3"/>',
+  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7L11.5 6.8"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5"/>',
+};
+const ic = (name, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${I[name]}</svg>`;
+
+/* =========================================================
+   DB: capa de datos. Todas las funciones son async para que
+   la interfaz no cambie cuando conectemos la base remota.
+   ========================================================= */
+const KEY = CLOUD ? 'pulso.cloud.v1' : 'pulso.v1';
+const defaults = () => ({version: 1, students: [], classes: [], settings: {grupo: 'Grupo de jóvenes', servicio: '', riesgo: 3, inactivo: 8}});
+let data = defaults();
+let storageOK = true;
+
+const DB = {
+  load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) { const d = JSON.parse(raw); data = Object.assign(defaults(), d); data.settings = Object.assign(defaults().settings, d.settings || {}); }
+    } catch (e) { storageOK = false; }
+  },
+  persist() {
+    try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { storageOK = false; }
+    invalidate();
+  },
+  student: id => data.students.find(s => s.id === id),
+  cls: id => data.classes.find(c => c.id === id),
+  async saveStudent(s) {
+    s.id = s.id || uid();
+    s.actualizado = new Date().toISOString();
+    const i = data.students.findIndex(x => x.id === s.id);
+    if (i < 0) { s.creado = s.actualizado; data.students.push(s); } else data.students[i] = Object.assign(data.students[i], s);
+    DB.persist(); Sync.push({t: 'upJ', rows: [J.toRow(DB.student(s.id))]}); return DB.student(s.id);
+  },
+  async deleteStudent(id) {
+    data.students = data.students.filter(s => s.id !== id);
+    data.classes.forEach(c => { c.asistentes = c.asistentes.filter(x => x !== id); });
+    DB.persist(); Sync.push({t: 'delJ', ids: [id]});
+  },
+  async saveClass(c) {
+    c.id = c.id || uid();
+    c.asistentes = c.asistentes || [];
+    const i = data.classes.findIndex(x => x.id === c.id);
+    if (i < 0) data.classes.push(c); else data.classes[i] = Object.assign(data.classes[i], c);
+    DB.persist(); Sync.push({t: 'upC', rows: [C.toRow(DB.cls(c.id))]}); return DB.cls(c.id);
+  },
+  async deleteClass(id) { data.classes = data.classes.filter(c => c.id !== id); DB.persist(); Sync.push({t: 'delC', ids: [id]}); },
+  async setAttendance(classId, studentId, present) {
+    const c = DB.cls(classId); if (!c) return;
+    const has = c.asistentes.includes(studentId);
+    if (present === has) return;
+    if (present) c.asistentes.push(studentId); else c.asistentes = c.asistentes.filter(x => x !== studentId);
+    DB.persist(); Sync.push({t: 'mark', c: classId, j: studentId, on: !!present});
+  },
+  async mergeStudent(fromId, toId) {
+    const moved = data.classes.filter(c => c.asistentes.includes(fromId)).map(c => ({clase_id: c.id, joven_id: toId}));
+    data.classes.forEach(c => {
+      if (c.asistentes.includes(fromId)) {
+        c.asistentes = c.asistentes.filter(x => x !== fromId);
+        if (!c.asistentes.includes(toId)) c.asistentes.push(toId);
+      }
+    });
+    const to = DB.student(toId), from = DB.student(fromId);
+    if (to && from) { to.idsAnteriores = [...(to.idsAnteriores || []), fromId]; }
+    data.students = data.students.filter(s => s.id !== fromId);
+    DB.persist();
+    if (to) Sync.push({t: 'upJ', rows: [J.toRow(to)]});
+    if (moved.length) Sync.push({t: 'upA', rows: moved});
+    Sync.push({t: 'delJ', ids: [fromId]});
+  },
+  async saveSettings(s) {
+    data.settings = Object.assign(data.settings, s); DB.persist();
+    const t = data.settings; Sync.push({t: 'set', row: {grupo: t.grupo, servicio: t.servicio || null, riesgo: Number(t.riesgo) || 3, inactivo: Number(t.inactivo) || 8}});
+  },
+  async replaceAll(d) {
+    data = Object.assign(defaults(), d); data.settings = Object.assign(defaults().settings, d.settings || {}); DB.persist();
+    if (!CLOUD) return;
+    const vj = new Set(data.students.map(s => s.id)), vc = new Set(data.classes.map(c => c.id));
+    data.classes.forEach(c => { c.asistentes = c.asistentes.filter(j => vj.has(j)); });
+    Sync.push({t: 'wipe'});
+    if (data.students.length) Sync.push({t: 'upJ', rows: data.students.map(J.toRow)});
+    if (data.classes.length) Sync.push({t: 'upC', rows: data.classes.map(C.toRow)});
+    const ar = attRows(data.classes, vj, vc); if (ar.length) Sync.push({t: 'upA', rows: ar});
+    const t = data.settings; Sync.push({t: 'set', row: {grupo: t.grupo, servicio: t.servicio || null, riesgo: Number(t.riesgo) || 3, inactivo: Number(t.inactivo) || 8}});
+  },
+  async mergeAll(d) {
+    for (const s of d.students) { const i = data.students.findIndex(x => x.id === s.id); if (i < 0) data.students.push(s); else data.students[i] = Object.assign(data.students[i], s); }
+    for (const c of d.classes) { const i = data.classes.findIndex(x => x.id === c.id); if (i < 0) data.classes.push(c); else data.classes[i] = Object.assign(data.classes[i], c); }
+    DB.persist();
+    if (!CLOUD) return;
+    const vj = new Set(data.students.map(s => s.id));
+    if (d.students.length) Sync.push({t: 'upJ', rows: d.students.map(s => J.toRow(DB.student(s.id)))});
+    if (d.classes.length) Sync.push({t: 'upC', rows: d.classes.map(c => C.toRow(DB.cls(c.id)))});
+    const ar = attRows(d.classes.map(c => DB.cls(c.id)), vj, null); if (ar.length) Sync.push({t: 'upA', rows: ar});
+  },
+};
+
+/* =========================================================
+   AUTH: cuentas individuales, sin correo.
+   Roles: 'superadmin' (crea, edita y elimina profesores, importa,
+   restaura y borra) y 'profesor' (toma lista, crea y edita).
+   PROVISIONAL (fase 1): las cuentas viven en este dispositivo.
+   En la fase 2 (Supabase) Users y Auth cambian por dentro:
+   - el usuario "ana" entra como ana@pulso.app, una cuenta técnica
+     que nadie lee; nunca se usa el correo personal de nadie.
+   - crear, eliminar y restablecer pasan por la función del
+     servidor admin-usuarios (ver carpeta supabase/).
+   - las reglas RLS bloquean al instante a un usuario eliminado.
+   Cuenta inicial de prueba: admin / pulso2026
+   ========================================================= */
+const AUTH_CFG = {intentos: 5, bloqueoSeg: 30, minClave: 6};
+const SKEY = 'pulso.session', LKEY = 'pulso.lock', UKEY = 'pulso.users';
+const ROLES = {superadmin: 'Super administrador', profesor: 'Profesor'};
+const ROLES_CORTO = {superadmin: 'Super admin', profesor: 'Profesor'};
+const mem = {};
+const ls = {
+  get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : (mem[k] ?? null); } catch (e) { return mem[k] ?? null; } },
+  set(k, v) { mem[k] = v; try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+async function sha256(t) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+const hashOf = (u, c) => sha256(u + ':' + c);
+const cleanUser = u => norm(u).replace(/\s+/g, '.').replace(/[^a-z0-9._]/g, '').replace(/\.{2,}/g, '.').replace(/^\.|\.$/g, '');
+const validUser = u => /^[a-z0-9._]{3,20}$/.test(u);
+function tempPassword(n = 8) {
+  const abc = 'abcdefghjkmnpqrstuvwxyz23456789'; const r = new Uint32Array(n); crypto.getRandomValues(r);
+  return [...r].map(x => abc[x % abc.length]).join('');
+}
+const LocalUsers = {
+  all() {
+    let u = ls.get(UKEY);
+    if (!u || !u.length) { u = [{id: 'u-admin', usuario: 'admin', nombre: 'Super administrador', rol: 'superadmin', hash: 'a0e8b24b8b550e582db7cf010be7613221d96add5a2324930722a6938df17535', creado: new Date().toISOString()}]; ls.set(UKEY, u); }
+    return u;
+  },
+  get: id => LocalUsers.all().find(u => u.id === id),
+  supers: () => LocalUsers.all().filter(u => u.rol === 'superadmin').length,
+  async create({usuario, nombre, rol, clave}) {
+    usuario = cleanUser(usuario); nombre = String(nombre || '').trim();
+    if (!nombre) throw new Error('Escribe el nombre del profesor.');
+    if (!validUser(usuario)) throw new Error('El usuario debe tener de 3 a 20 letras o números, sin espacios ni tildes.');
+    if (LocalUsers.all().some(u => u.usuario === usuario)) throw new Error(`Ya existe el usuario ${usuario}. Elige otro.`);
+    if (String(clave).length < AUTH_CFG.minClave) throw new Error(`La contraseña debe tener al menos ${AUTH_CFG.minClave} caracteres.`);
+    const u = {id: uid(), usuario, nombre, rol: ROLES[rol] ? rol : 'profesor', hash: await hashOf(usuario, clave), creado: new Date().toISOString()};
+    ls.set(UKEY, [...LocalUsers.all(), u]); return u;
+  },
+  async update(id, {nombre, rol}) {
+    const list = LocalUsers.all(), u = list.find(x => x.id === id); if (!u) throw new Error('Esta cuenta ya no existe.');
+    if (u.rol === 'superadmin' && rol !== 'superadmin' && LocalUsers.supers() === 1) throw new Error('Debe quedar al menos un super administrador.');
+    if (nombre != null) { nombre = nombre.trim(); if (!nombre) throw new Error('Escribe el nombre.'); u.nombre = nombre; }
+    if (rol && ROLES[rol]) u.rol = rol;
+    ls.set(UKEY, list); return u;
+  },
+  async resetPassword(id, clave) {
+    const list = LocalUsers.all(), u = list.find(x => x.id === id); if (!u) throw new Error('Esta cuenta ya no existe.');
+    if (String(clave).length < AUTH_CFG.minClave) throw new Error(`La contraseña debe tener al menos ${AUTH_CFG.minClave} caracteres.`);
+    u.hash = await hashOf(u.usuario, clave); ls.set(UKEY, list);
+  },
+  async remove(id) {
+    const me = LocalAuth.session(); const u = LocalUsers.get(id);
+    if (!u) return;
+    if (me && me.uid === id) throw new Error('No puedes eliminar tu propia cuenta.');
+    if (u.rol === 'superadmin' && LocalUsers.supers() === 1) throw new Error('Debe quedar al menos un super administrador.');
+    ls.set(UKEY, LocalUsers.all().filter(x => x.id !== id));
+  },
+};
+const LocalAuth = {
+  session() {
+    const s = ls.get(SKEY); if (!s) return null;
+    const u = LocalUsers.get(s.uid);
+    if (!u) { ls.set(SKEY, null); ls.set('pulso.kicked', true); return null; }
+    return {uid: u.id, usuario: u.usuario, nombre: u.nombre, rol: u.rol, desde: s.desde};
+  },
+  isSuper: () => LocalAuth.session()?.rol === 'superadmin',
+  lockLeft() { const l = ls.get(LKEY); return l && l.until > Date.now() ? Math.ceil((l.until - Date.now()) / 1000) : 0; },
+  async signIn(usuario, clave) {
+    if (LocalAuth.lockLeft()) return {ok: false, lock: LocalAuth.lockLeft()};
+    if (!window.crypto || !crypto.subtle) return {ok: false, insecure: true};
+    const name = cleanUser(usuario);
+    const u = LocalUsers.all().find(x => x.usuario === name);
+    const ok = !!u && await hashOf(name, clave) === u.hash;
+    if (ok) { ls.set(LKEY, null); ls.set('pulso.kicked', null); ls.set(SKEY, {uid: u.id, desde: new Date().toISOString()}); return {ok: true, user: u}; }
+    return LocalAuth.fail();
+  },
+  fail() {
+    const l = ls.get(LKEY) || {fails: 0};
+    l.fails = (l.fails || 0) + 1;
+    if (l.fails >= AUTH_CFG.intentos) { ls.set(LKEY, {fails: 0, until: Date.now() + AUTH_CFG.bloqueoSeg * 1000}); return {ok: false, lock: AUTH_CFG.bloqueoSeg}; }
+    ls.set(LKEY, l); return {ok: false, left: AUTH_CFG.intentos - l.fails};
+  },
+  async init() {},
+  async changePassword(actual, nueva) {
+    const s = LocalAuth.session(); const u = LocalUsers.get(s.uid);
+    if (await hashOf(u.usuario, actual) !== u.hash) throw new Error('La contraseña actual no es correcta.');
+    await LocalUsers.resetPassword(u.id, nueva);
+  },
+  async signOut() { ls.set(SKEY, null); },
+};
+
+/* =========================================================
+   NUBE (Supabase): sincronización
+   - Cada cambio se aplica al instante en el celular y entra a una
+     cola (outbox) guardada en el dispositivo. La cola se envía en
+     orden; si no hay señal, espera y se envía al volver.
+   - pull() trae todo desde Supabase y vuelve a aplicar encima lo
+     que siga en la cola, para no perder nada sin enviar.
+   - Tiempo real: las marcas de asistencia de otro profesor llegan
+     solas; otros cambios disparan un pull().
+   ========================================================= */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const nz = v => (v === '' || v == null) ? null : v;
+const J = {
+  toRow: s => ({id: s.id, nombres: nz(s.nombres), apellidos: nz(s.apellidos), edad: s.edad === '' || s.edad == null ? null : (parseInt(s.edad, 10) || null),
+    fecha_nacimiento: nz(s.fechaNacimiento), curso: nz(s.curso), acudiente: nz(s.acudiente), telefono: nz(s.telefono), fecha_ingreso: nz(s.fechaIngreso),
+    foto: nz(s.foto), notas: nz(s.notas), por_identificar: !!s.placeholder, ids_anteriores: s.idsAnteriores || []}),
+  fromRow: r => ({id: r.id, nombres: r.nombres || '', apellidos: r.apellidos || '', edad: r.edad ?? '', fechaNacimiento: r.fecha_nacimiento || '', curso: r.curso || '',
+    acudiente: r.acudiente || '', telefono: r.telefono || '', fechaIngreso: r.fecha_ingreso || '', foto: r.foto || '', notas: r.notas || '',
+    placeholder: !!r.por_identificar, idsAnteriores: r.ids_anteriores || []}),
+};
+const C = {
+  toRow: c => ({id: c.id, fecha: c.fecha, servicio: nz(c.servicio), tema: nz(c.tema), ponente: nz(c.ponente), notas: nz(c.notas),
+    registrado_por: UUID_RE.test(c.registradoPorId || '') ? c.registradoPorId : null, registrado_por_nombre: nz(c.registradoPor)}),
+  fromRow: r => ({id: r.id, fecha: r.fecha, servicio: r.servicio || '', tema: r.tema || '', ponente: r.ponente || '', notas: r.notas || '',
+    registradoPor: r.registrado_por_nombre || '', registradoPorId: r.registrado_por || ''}),
+};
+const chunks = (a, n) => { const r = []; for (let i = 0; i < a.length; i += n) r.push(a.slice(i, i + n)); return r; };
+const isNetwork = e => !!e && (e instanceof TypeError || /failed to fetch|fetch failed|network|load failed|networkerror|failed to send/i.test(String(e.message || e)));
+const isAuthErr = e => !!e && (e.code === 'PGRST301' || e.code === 'PGRST303' || e.status === 401 || /jwt/i.test(String(e.message || '')));
+async function q(p) { const {error} = await p; if (error) throw error; }
+function attRows(classes, validJ, validC) {
+  const rows = [];
+  classes.forEach(c => c.asistentes.forEach(j => { if ((!validJ || validJ.has(j)) && (!validC || validC.has(c.id))) rows.push({clase_id: c.id, joven_id: j}); }));
+  return rows;
+}
+async function runOp(op) {
+  const me = Auth.session();
+  switch (op.t) {
+    case 'upJ': for (const ch of chunks(op.rows, 400)) await q(sb.from('jovenes').upsert(ch)); break;
+    case 'delJ': for (const ch of chunks(op.ids, 150)) await q(sb.from('jovenes').delete().in('id', ch)); break;
+    case 'upC':
+      for (const ch of chunks(op.rows, 400)) {
+        try { await q(sb.from('clases').upsert(ch)); }
+        catch (e) { if (e.code === '23503') await q(sb.from('clases').upsert(ch.map(r => ({...r, registrado_por: null})))); else throw e; }
+      }
+      break;
+    case 'delC': for (const ch of chunks(op.ids, 150)) await q(sb.from('clases').delete().in('id', ch)); break;
+    case 'mark':
+      if (op.on) await q(sb.from('asistencias').upsert({clase_id: op.c, joven_id: op.j, marcado_por: me && UUID_RE.test(me.uid) ? me.uid : null}, {onConflict: 'clase_id,joven_id', ignoreDuplicates: true}));
+      else await q(sb.from('asistencias').delete().match({clase_id: op.c, joven_id: op.j}));
+      break;
+    case 'upA': for (const ch of chunks(op.rows, 500)) await q(sb.from('asistencias').upsert(ch, {onConflict: 'clase_id,joven_id', ignoreDuplicates: true})); break;
+    case 'set': await q(sb.from('ajustes').update(op.row).eq('id', 1)); break;
+    case 'wipe':
+      await q(sb.from('asistencias').delete().neq('clase_id', ''));
+      await q(sb.from('clases').delete().neq('id', ''));
+      await q(sb.from('jovenes').delete().neq('id', ''));
+      break;
+  }
+}
+// aplicar una operación pendiente sobre datos recién traídos
+const applyOp = {
+  upJ: (d, op) => op.rows.forEach(r => { const s = J.fromRow(r); const i = d.students.findIndex(x => x.id === s.id); if (i < 0) d.students.push(s); else d.students[i] = Object.assign(d.students[i], s); }),
+  delJ: (d, op) => { const ids = new Set(op.ids); d.students = d.students.filter(s => !ids.has(s.id)); d.classes.forEach(c => { c.asistentes = c.asistentes.filter(x => !ids.has(x)); }); },
+  upC: (d, op) => op.rows.forEach(r => { const c = C.fromRow(r); const ex = d.classes.find(x => x.id === c.id); if (ex) Object.assign(ex, c); else d.classes.push(Object.assign(c, {asistentes: []})); }),
+  delC: (d, op) => { const ids = new Set(op.ids); d.classes = d.classes.filter(c => !ids.has(c.id)); },
+  mark: (d, op) => { const c = d.classes.find(x => x.id === op.c); if (!c) return; const has = c.asistentes.includes(op.j); if (op.on && !has) c.asistentes.push(op.j); if (!op.on && has) c.asistentes = c.asistentes.filter(x => x !== op.j); },
+  upA: (d, op) => op.rows.forEach(r => { const c = d.classes.find(x => x.id === r.clase_id); if (c && !c.asistentes.includes(r.joven_id)) c.asistentes.push(r.joven_id); }),
+  set: (d, op) => { Object.assign(d.settings, {grupo: op.row.grupo, servicio: op.row.servicio || '', riesgo: op.row.riesgo, inactivo: op.row.inactivo}); },
+  wipe: d => { d.students = []; d.classes = []; },
+};
+async function fetchAll(table, cols, orders) {
+  let out = [], from = 0; const size = 1000;
+  for (;;) {
+    let qy = sb.from(table).select(cols).range(from, from + size - 1);
+    orders.forEach(o => { qy = qy.order(o); });
+    const {data: rows, error} = await qy;
+    if (error) throw error;
+    Uso.add(JSON.stringify(rows || []).length, 1);
+    out = out.concat(rows || []);
+    if (!rows || rows.length < size) break;
+    from += size;
+  }
+  return out;
+}
+const OKEY = 'pulso.outbox', ME_KEY = 'pulso.me', UCACHE = 'pulso.cloudUsers';
+let needRender = false;
+function softRender() {
+  if (sheetEl) { needRender = true; return; }
+  const h = location.hash;
+  if (h.startsWith('#/lista/')) { const c = DB.cls(h.split('/')[2]); if (c && $('#roster')) { drawRoster(c); const pc = $('#pcount'); if (pc) pc.textContent = c.asistentes.length; return; } }
+  if (h === '#/importar') { needRender = true; return; }
+  const ae = document.activeElement;
+  if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) { needRender = true; return; }
+  render();
+}
+const Sync = {
+  queue: (() => { if (!CLOUD) return []; try { return JSON.parse(localStorage.getItem(OKEY) || '[]'); } catch (e) { return []; } })(),
+  state: 'ok', lastPull: 0, flushing: false, pulling: false, again: false, timer: null, channel: null,
+  save() { try { localStorage.setItem(OKEY, JSON.stringify(Sync.queue)); } catch (e) {} },
+  push(op) { if (!CLOUD) return; Sync.queue.push(op); Sync.save(); Sync.ui(); Sync.flush(); },
+  errText(e) {
+    if (e.code === '42501') return 'No tienes permiso para ese cambio. Se deshizo.';
+    if (e.code === '23503') return 'Un registro ya no existía. Se actualizaron los datos.';
+    if (e.code === '23505') return 'Ese registro ya existía. Se actualizaron los datos.';
+    return 'No se pudo guardar un cambio: ' + (e.message || 'error desconocido');
+  },
+  async flush() {
+    if (!CLOUD || !sb || Sync.flushing || !Sync.queue.length || !Auth.session()) { Sync.ui(); return; }
+    Sync.flushing = true; let resync = false, refreshed = false;
+    try {
+      let {data: {session}} = await sb.auth.getSession();
+      if (!session) { Sync.state = navigator.onLine ? 'auth' : 'offline'; return; }
+      while (Sync.queue.length) {
+        const op = Sync.queue[0];
+        try { await runOp(op); Sync.queue.shift(); Sync.save(); Sync.state = 'ok'; Uso.add(0, 1); }
+        catch (e) {
+          if (isNetwork(e)) { Sync.state = 'offline'; break; }
+          if (isAuthErr(e)) {
+            if (!refreshed) { refreshed = true; const r = await sb.auth.refreshSession().catch(() => ({})); if (r && r.data && r.data.session) continue; }
+            Sync.state = 'auth'; break;
+          }
+          console.error('Pulso: cambio rechazado', op.t, e);
+          Sync.queue.shift(); Sync.save(); resync = true; toast(Sync.errText(e));
+        }
+      }
+    } catch (e) { Sync.state = isNetwork(e) ? 'offline' : Sync.state; }
+    finally { Sync.flushing = false; Sync.ui(); }
+    if (resync) Sync.pull();
+  },
+  async pull() {
+    if (!CLOUD || !sb || !Auth.session()) return;
+    if (Sync.pulling) { Sync.again = true; return; }
+    Sync.pulling = true;
+    try {
+      const [js, cs, as, aj, ps] = await Promise.all([
+        fetchAll('jovenes', '*', ['id']), fetchAll('clases', '*', ['id']), fetchAll('asistencias', 'clase_id,joven_id', ['clase_id', 'joven_id']),
+        sb.from('ajustes').select('*').eq('id', 1).maybeSingle(), sb.from('perfiles').select('id,usuario,nombre,rol,creado').order('nombre'),
+      ]);
+      if (aj.error) throw aj.error; if (ps.error) throw ps.error;
+      const me = Auth.session(); if (!me) return;
+      const mine = (ps.data || []).find(p => p.id === me.uid);
+      if (!mine) { await CloudAuth.kick(); return; }
+      if (mine.nombre !== me.nombre || mine.rol !== me.rol) { CloudAuth.me = {uid: mine.id, usuario: mine.usuario, nombre: mine.nombre, rol: mine.rol}; ls.set(ME_KEY, CloudAuth.me); }
+      CloudUsers.list = ps.data || []; ls.set(UCACHE, CloudUsers.list);
+      const byC = new Map(); as.forEach(a => { if (!byC.has(a.clase_id)) byC.set(a.clase_id, []); byC.get(a.clase_id).push(a.joven_id); });
+      const d = {version: 1, students: js.map(J.fromRow), classes: cs.map(r => Object.assign(C.fromRow(r), {asistentes: byC.get(r.id) || []})),
+        settings: Object.assign(defaults().settings, aj.data ? {grupo: aj.data.grupo, servicio: aj.data.servicio || '', riesgo: aj.data.riesgo, inactivo: aj.data.inactivo} : {})};
+      Sync.queue.forEach(op => { const f = applyOp[op.t]; if (f) f(d, op); });
+      data = d; DB.persist(); Sync.lastPull = Date.now();
+      if (!Sync.queue.length) Sync.state = 'ok';
+      softRender();
+      Uso.report();
+    } catch (e) {
+      if (isNetwork(e)) Sync.state = 'offline';
+      else if (isAuthErr(e)) Sync.state = 'auth';
+      else console.error('Pulso: no se pudo actualizar', e);
+    } finally {
+      Sync.pulling = false; Sync.ui();
+      if (Sync.again) { Sync.again = false; Sync.pull(); }
+    }
+  },
+  schedulePull(ms = 2000) { clearTimeout(Sync.timer); Sync.timer = setTimeout(() => Sync.pull(), ms); },
+  remoteMark(c, j, on) {
+    if (!c || !j || Sync.queue.some(op => op.t === 'mark' && op.c === c && op.j === j)) return;
+    const cl = DB.cls(c); if (!cl) { Sync.schedulePull(); return; }
+    const has = cl.asistentes.includes(j); if (has === on) return;
+    if (on) cl.asistentes.push(j); else cl.asistentes = cl.asistentes.filter(x => x !== j);
+    DB.persist();
+    if (location.hash === '#/lista/' + c) {
+      const t = document.querySelector(`.tile[data-id="${CSS.escape(j)}"]`); if (t) t.setAttribute('aria-pressed', on);
+      const pc = $('#pcount'); if (pc) pc.textContent = cl.asistentes.length;
+    } else softRender();
+  },
+  subscribe() {
+    if (!CLOUD || !sb || Sync.channel) return;
+    try {
+      Sync.channel = sb.channel('pulso-cambios')
+        .on('postgres_changes', {event: 'INSERT', schema: 'public', table: 'asistencias'}, p => Sync.remoteMark(p.new && p.new.clase_id, p.new && p.new.joven_id, true))
+        .on('postgres_changes', {event: 'DELETE', schema: 'public', table: 'asistencias'}, p => Sync.remoteMark(p.old && p.old.clase_id, p.old && p.old.joven_id, false))
+        .on('postgres_changes', {event: '*', schema: 'public', table: 'clases'}, () => Sync.schedulePull())
+        .on('postgres_changes', {event: '*', schema: 'public', table: 'jovenes'}, () => Sync.schedulePull())
+        .on('postgres_changes', {event: '*', schema: 'public', table: 'perfiles'}, () => Sync.schedulePull())
+        .on('postgres_changes', {event: '*', schema: 'public', table: 'ajustes'}, () => Sync.schedulePull())
+        .subscribe();
+    } catch (e) { Sync.channel = null; }
+  },
+  unsubscribe() { if (Sync.channel && sb) { try { sb.removeChannel(Sync.channel); } catch (e) {} } Sync.channel = null; },
+  status() {
+    const n = Sync.queue.length;
+    if (!CLOUD) return '';
+    if (Sync.state === 'auth') return `Tu sesión venció. Vuelve a entrar para enviar ${plural(n, 'cambio')}.`;
+    if (!navigator.onLine || Sync.state === 'offline') return n ? `Sin conexión. ${plural(n, 'cambio')} por enviar.` : 'Sin conexión. Puedes seguir trabajando.';
+    if (n) return `Enviando ${plural(n, 'cambio')}…`;
+    return Sync.lastPull ? `Sincronizado a las ${new Date(Sync.lastPull).toLocaleTimeString('es-CO', {hour: 'numeric', minute: '2-digit'})}` : 'Conectado';
+  },
+  ui() {
+    if (!CLOUD) return;
+    let bar = document.getElementById('syncbar');
+    const show = Auth.session() && (Sync.state === 'auth' || !navigator.onLine || Sync.state === 'offline');
+    if (!show) { if (bar) bar.remove(); }
+    else {
+      if (!bar) { bar = document.createElement('div'); bar.id = 'syncbar'; bar.className = 'syncbar'; bar.setAttribute('role', 'status'); document.body.appendChild(bar); }
+      bar.innerHTML = esc(Sync.status()) + (Sync.state === 'auth' ? ' <button data-act="reauth">Entrar</button>' : '');
+    }
+    const st = document.getElementById('syncstatus'); if (st) st.textContent = Sync.status();
+  },
+};
+
+const CloudAuth = {
+  me: null,
+  email: u => `${u}@${CFG.dominio}`,
+  session: () => CloudAuth.me,
+  isSuper: () => CloudAuth.me?.rol === 'superadmin',
+  lockLeft: () => LocalAuth.lockLeft(),
+  async init() {
+    const cached = ls.get(ME_KEY);
+    CloudUsers.list = ls.get(UCACHE) || [];
+    if (!sb) { CloudAuth.me = cached; return; }
+    let session = null;
+    try { ({data: {session}} = await sb.auth.getSession()); } catch (e) {}
+    if (session) {
+      CloudAuth.me = cached && cached.uid === session.user.id ? cached : {uid: session.user.id, usuario: (session.user.email || '').split('@')[0], nombre: (session.user.user_metadata || {}).nombre || 'Profesor', rol: 'profesor'};
+      try { await CloudAuth.loadProfile(session.user.id); } catch (e) {}
+    } else if (cached && !navigator.onLine) CloudAuth.me = cached;
+    else CloudAuth.me = null;
+  },
+  async loadProfile(id) {
+    const {data: p, error} = await sb.from('perfiles').select('id, usuario, nombre, rol').eq('id', id).maybeSingle();
+    if (error) throw error;
+    if (!p) { await CloudAuth.kick(); return null; }
+    CloudAuth.me = {uid: p.id, usuario: p.usuario, nombre: p.nombre, rol: p.rol}; ls.set(ME_KEY, CloudAuth.me);
+    return p;
+  },
+  async signIn(usuario, clave) {
+    if (LocalAuth.lockLeft()) return {ok: false, lock: LocalAuth.lockLeft()};
+    if (!sb) return {ok: false, offline: true};
+    const name = cleanUser(usuario);
+    if (!validUser(name)) return LocalAuth.fail();
+    let res;
+    try { res = await sb.auth.signInWithPassword({email: CloudAuth.email(name), password: clave}); } catch (e) { return {ok: false, offline: true}; }
+    if (res.error) return isNetwork(res.error) ? {ok: false, offline: true} : LocalAuth.fail();
+    ls.set(LKEY, null); ls.set('pulso.kicked', null);
+    let p;
+    try { p = await CloudAuth.loadProfile(res.data.user.id); } catch (e) { return {ok: false, offline: true}; }
+    if (!p) return {ok: false, noProfile: true};
+    Sync.state = 'ok'; Uso.add(0, 0, 1); Sync.subscribe(); Sync.flush(); Sync.pull();
+    return {ok: true, user: CloudAuth.me};
+  },
+  async changePassword(actual, nueva) {
+    if (String(nueva).length < AUTH_CFG.minClave) throw new Error(`La contraseña debe tener al menos ${AUTH_CFG.minClave} caracteres.`);
+    if (!sb) throw new Error('Sin conexión. Intenta de nuevo con internet.');
+    const r1 = await sb.auth.signInWithPassword({email: CloudAuth.email(CloudAuth.me.usuario), password: actual});
+    if (r1.error) throw new Error(isNetwork(r1.error) ? 'Sin conexión. Intenta de nuevo con internet.' : 'La contraseña actual no es correcta.');
+    const r2 = await sb.auth.updateUser({password: nueva});
+    if (r2.error) throw new Error(isNetwork(r2.error) ? 'Sin conexión. Intenta de nuevo con internet.' : r2.error.message);
+  },
+  async signOut() {
+    Sync.unsubscribe();
+    try { if (sb) await sb.auth.signOut(); } catch (e) {}
+    CloudAuth.me = null; ls.set(ME_KEY, null); ls.set(UCACHE, null); CloudUsers.list = [];
+    Sync.queue = []; Sync.save(); Sync.state = 'ok';
+    data = defaults(); try { localStorage.removeItem(KEY); } catch (e) {} invalidate();
+    Sync.ui();
+  },
+  async kick() { await CloudAuth.signOut(); ls.set('pulso.kicked', true); closeSheet(); location.hash = '#/inicio'; render(); },
+  reauth() { CloudAuth.me = null; Sync.ui(); closeSheet(); render(); },
+};
+
+const CloudUsers = {
+  list: [],
+  all: () => CloudUsers.list,
+  get: id => CloudUsers.list.find(u => u.id === id),
+  supers: () => CloudUsers.list.filter(u => u.rol === 'superadmin').length,
+  async call(body) {
+    if (!sb) throw new Error('Sin conexión. Necesitas internet para gestionar cuentas.');
+    const {data: r, error} = await sb.functions.invoke('admin-usuarios', {body});
+    if (error) {
+      let m = error.message || 'No se pudo completar.';
+      try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch (e) {}
+      if (isNetwork(error) || /failed to send/i.test(m)) m = 'Sin conexión, o la función admin-usuarios no está publicada.';
+      throw new Error(m);
+    }
+    if (r && r.error) throw new Error(r.error);
+    return r;
+  },
+  async refresh() {
+    const {data: ps, error} = await sb.from('perfiles').select('id,usuario,nombre,rol,creado').order('nombre');
+    if (!error) { CloudUsers.list = ps || []; ls.set(UCACHE, CloudUsers.list); }
+  },
+  async create({usuario, nombre, rol, clave}) {
+    usuario = cleanUser(usuario); nombre = String(nombre || '').trim();
+    if (!nombre) throw new Error('Escribe el nombre del profesor.');
+    if (!validUser(usuario)) throw new Error('El usuario debe tener de 3 a 20 letras o números, sin espacios ni tildes.');
+    if (String(clave).length < AUTH_CFG.minClave) throw new Error(`La contraseña debe tener al menos ${AUTH_CFG.minClave} caracteres.`);
+    const r = await CloudUsers.call({accion: 'crear', usuario, nombre, rol, clave});
+    await CloudUsers.refresh(); return r;
+  },
+  async update(id, o) {
+    await CloudUsers.call(Object.assign({accion: 'actualizar', id}, o));
+    await CloudUsers.refresh();
+    if (CloudAuth.me && id === CloudAuth.me.uid) await CloudAuth.loadProfile(id).catch(() => {});
+  },
+  async resetPassword(id, clave) { await CloudUsers.call({accion: 'restablecer', id, clave}); },
+  async remove(id) { await CloudUsers.call({accion: 'eliminar', id}); await CloudUsers.refresh(); },
+};
+
+const Users = CLOUD ? CloudUsers : LocalUsers;
+const Auth = CLOUD ? CloudAuth : LocalAuth;
+
+/* =========================================================
+   Estadísticas
+   - El % se calcula desde que el joven llegó (fecha de ingreso
+     o primera asistencia), no sobre todas las clases.
+   ========================================================= */
+const ESTADOS = {
+  constante: {label: 'Constante', color: '#1C7F54', desc: 'Viene al 70 % o más de las clases desde que llegó'},
+  ocasional: {label: 'Ocasional', color: '#8C93AD', desc: 'Viene a menos del 70 % de las clases'},
+  riesgo:    {label: 'En riesgo', color: '#C93B34', desc: 'Faltó a las últimas clases seguidas'},
+  nuevo:     {label: 'Nuevo',     color: '#E8C51E', desc: 'Llegó en las últimas 4 clases'},
+  inactivo:  {label: 'Inactivo',  color: '#DDE2EE', desc: 'No viene hace varias clases'},
+};
+const ORDER = ['constante', 'ocasional', 'nuevo', 'riesgo', 'inactivo'];
+let cache = new Map();
+function invalidate() { cache = new Map(); }
+const servicios = () => [...new Set(data.classes.map(c => c.servicio).filter(Boolean))].sort();
+
+function stats(servicio) {
+  const key = servicio || 'Todos';
+  if (cache.has(key)) return cache.get(key);
+  const classes = data.classes.filter(c => key === 'Todos' || c.servicio === key).slice().sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
+  const n = classes.length;
+  const att = new Map();
+  classes.forEach((c, i) => c.asistentes.forEach(id => { if (!att.has(id)) att.set(id, []); att.get(id).push(i); }));
+  const R = Number(data.settings.riesgo) || 3, INA = Number(data.settings.inactivo) || 8;
+  const per = new Map();
+  for (const s of data.students) {
+    const idx = att.get(s.id) || [];
+    const set = new Set(idx);
+    const first = idx.length ? idx[0] : null;
+    let ing = null;
+    if (s.fechaIngreso) { ing = classes.findIndex(c => c.fecha >= s.fechaIngreso); if (ing < 0) ing = n; }
+    const start = first == null ? (ing == null ? n : ing) : (ing == null ? first : Math.min(first, ing));
+    const relevant = Math.max(0, n - start);
+    const asistidas = idx.length;
+    const pct = relevant ? asistidas / relevant : 0;
+    const last = idx.length ? idx[idx.length - 1] : null;
+    const seguidas = last == null ? relevant : n - 1 - last;
+    let best = 0, cur = 0;
+    for (let i = start; i < n; i++) { if (set.has(i)) { cur++; if (cur > best) best = cur; } else cur = 0; }
+    const strip = [];
+    for (let i = Math.max(0, n - 12); i < n; i++) strip.push(i < start ? -1 : set.has(i) ? 1 : 0);
+    let estado;
+    if (!asistidas) estado = start >= n - 4 && !s.placeholder ? 'nuevo' : 'inactivo';
+    else if (seguidas >= INA) estado = 'inactivo';
+    else if (first >= n - 4) estado = 'nuevo';
+    else if (seguidas >= R) estado = 'riesgo';
+    else if (pct >= .7) estado = 'constante';
+    else estado = 'ocasional';
+    per.set(s.id, {asistidas, relevant, pct, seguidas, best, actual: cur, strip, estado, set, start, first,
+      lastFecha: last != null ? classes[last].fecha : null, firstFecha: first != null ? classes[first].fecha : null});
+  }
+  const r = {key, classes, n, per};
+  cache.set(key, r);
+  return r;
+}
+const stripHTML = strip => `<span class="strip" aria-hidden="true">${strip.map(v => `<i class="${v === 1 ? 'y' : v === -1 ? 'n' : ''}"></i>`).join('')}</span>`;
+const badge = e => `<span class="badge b-${e}">${ESTADOS[e].label}</span>`;
+
+/* =========================================================
+   Estado de la interfaz y router
+   ========================================================= */
+const ui = {periodo: '3m', servicio: null, filtro: 'todos', q: '', orden: 'pct', rq: '', rsort: 'frecuentes', showInactive: false, cq: ''};
+const curServicio = () => ui.servicio ?? (data.settings.servicio && servicios().includes(data.settings.servicio) ? data.settings.servicio : 'Todos');
+
+const routes = [
+  [/^#\/(inicio)?$/, viewHome, 'inicio'],
+  [/^#\/jovenes$/, viewStudents, 'jovenes'],
+  [/^#\/joven\/(.+)$/, viewStudent, 'jovenes'],
+  [/^#\/clases$/, viewClasses, 'clases'],
+  [/^#\/clase\/(.+)$/, viewClass, 'clases'],
+  [/^#\/lista$/, viewListStart, 'lista'],
+  [/^#\/lista\/(.+)$/, viewRoster, 'lista'],
+  [/^#\/mas$/, viewMore, 'mas'],
+  [/^#\/importar$/, viewImport, 'mas'],
+  [/^#\/profesores$/, viewTeachers, 'mas'],
+  [/^#\/estadisticas$/, viewStats, 'inicio'],
+  [/^#\/uso$/, viewUso, 'mas'],
+];
+function render() {
+  const h = location.hash || '#/inicio';
+  const ses = Auth.session();
+  document.body.classList.toggle('locked', !ses);
+  if (!ses) { viewLogin(); return; }
+  if ((h === '#/profesores' || h === '#/importar' || h === '#/uso') && ses.rol !== 'superadmin') { location.replace('#/mas'); return; }
+  for (const [re, fn, tab] of routes) {
+    const m = h.match(re);
+    if (m) {
+      document.querySelectorAll('.tab').forEach(t => t.toggleAttribute('aria-current', false));
+      const t = document.querySelector(`.tab[data-tab="${tab}"]`); if (t) t.setAttribute('aria-current', 'page');
+      fn(...m.slice(1).filter(x => x !== undefined && x !== 'inicio').map(decodeURIComponent));
+      return;
+    }
+  }
+  location.hash = '#/inicio';
+}
+window.addEventListener('hashchange', () => { closeSheet(); render(); window.scrollTo(0, 0); });
+const setView = html => { $('#view').innerHTML = html; };
+const topbar = (title, sub = '', left = '', right = '') => `<header class="top">${left}<h1>${title}${sub ? `<span class="sub">${sub}</span>` : ''}</h1>${right}</header>`;
+const backBtn = href => `<a class="icon-btn" href="${href}" aria-label="Volver">${ic('back')}</a>`;
+
+/* =========================================================
+   INGRESO
+   ========================================================= */
+const MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h4l2-5 3 9 2-6h7"/></svg>';
+function viewLogin() {
+  setView(`
+    <section class="login">
+      <div class="mark" aria-hidden="true">${MARK}</div>
+      <h1>Pulso</h1>
+      <p class="lead">Asistencia del grupo de jóvenes. Entra con tu usuario y contraseña de profesor.</p>
+      ${CLOUD && !sb ? `<div class="notice alert" style="margin-top:16px">No se pudo cargar la conexión con la base de datos. Revisa que tengas internet y vuelve a abrir la app.</div>` : ''}
+      ${CLOUD && Sync.queue.length ? `<div class="notice" style="margin-top:16px">Hay ${plural(Sync.queue.length, 'cambio')} guardados en este celular. Se enviarán cuando vuelvas a entrar.</div>` : ''}
+      <form id="lform" autocomplete="on" novalidate>
+        <label class="field"><span>Usuario</span><input class="input" name="usuario" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" value="${esc(ls.get('pulso.lastUser') || '')}" required></label>
+        <label class="field"><span>Contraseña</span><span class="pw"><input class="input" name="clave" type="password" autocomplete="current-password" required><button type="button" class="eye" data-act="togglePw" aria-label="Mostrar contraseña">${ic('eye')}</button></span></label>
+        <p class="err" id="lerr" role="alert">${ls.get('pulso.kicked') ? 'Tu cuenta fue eliminada. Si es un error, habla con el administrador.' : ''}</p>
+        <button class="btn primary block" type="submit" style="margin-top:6px">Entrar</button>
+      </form>
+      <p class="foot">La sesión queda abierta en este celular hasta que la cierres desde Más. Si olvidaste tu contraseña, el administrador puede darte una nueva.</p>
+    </section>`);
+  const f = $('#lform');
+  setTimeout(() => (f.usuario.value ? f.clave : f.usuario).focus(), 50);
+  f.addEventListener('submit', async e => {
+    e.preventDefault();
+    const err = $('#lerr'), btn = f.querySelector('[type=submit]');
+    if (!f.usuario.value.trim() || !f.clave.value) { err.textContent = 'Escribe el usuario y la contraseña.'; return; }
+    btn.disabled = true; btn.textContent = 'Entrando';
+    const r = await Auth.signIn(f.usuario.value, f.clave.value);
+    btn.disabled = false; btn.textContent = 'Entrar';
+    if (r.ok) { ls.set('pulso.lastUser', r.user.usuario); toast(`Hola, ${r.user.nombre.split(' ')[0]}`); if (location.hash === '#/inicio') render(); else location.hash = '#/inicio'; return; }
+    f.clave.value = ''; f.clave.focus();
+    err.textContent = r.insecure ? 'Abre la app desde una dirección segura (https) para poder entrar.'
+      : r.offline ? 'Sin conexión. Necesitas internet para entrar.'
+      : r.noProfile ? 'Tu cuenta existe pero no está habilitada en Pulso. Habla con el administrador.'
+      : r.lock ? `Demasiados intentos. Espera ${r.lock} segundos y vuelve a intentarlo.`
+      : `Usuario o contraseña incorrectos. ${r.left === 1 ? 'Te queda 1 intento' : `Te quedan ${r.left} intentos`} antes de una pausa.`;
+  });
+}
+/* =========================================================
+   INICIO
+   ========================================================= */
+function viewHome() {
+  const S = data.settings;
+  if (!data.students.length && !data.classes.length) {
+    setView(topbar(esc(S.grupo)) + `
+      <div class="empty">
+        <svg class="art" viewBox="0 0 120 80" fill="none" aria-hidden="true"><rect x="6" y="14" width="108" height="16" rx="8" fill="#DDE2EE"/><rect x="6" y="38" width="80" height="16" rx="8" fill="#FFE14D"/><rect x="6" y="62" width="96" height="16" rx="8" fill="#DDE2EE"/><path d="M92 46h8l4-8 6 16 3-8h5" stroke="#172042" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <h2>Empieza con tu grupo</h2>
+        <p>Trae la información de tu app anterior o agrega a los jóvenes y toma la primera lista.</p>
+        <div class="stack">
+          ${Auth.isSuper() ? `<a class="btn primary block" href="#/importar">${ic('upload')}Importar archivos CSV</a>` : ''}
+          <button class="btn ${Auth.isSuper() ? 'ghost' : 'primary'} block" data-act="newStudent">${ic('plus')}Agregar un joven</button>
+          ${Auth.isSuper() && !CLOUD ? `<button class="btn ghost block" data-act="demo">${ic('spark')}Ver con datos de ejemplo</button>` : ''}
+        </div>
+      </div>`);
+    return;
+  }
+  const serv = curServicio();
+  const st = stats(serv);
+  const {classes, n, per} = st;
+  const servs = servicios();
+  const chips = servs.length > 1 ? `<div class="chips" role="group" aria-label="Servicio">${['Todos', ...servs].map(s => `<button class="chip" data-act="servicio" data-v="${esc(s)}" aria-pressed="${s === serv}">${s === 'Todos' ? 'Todos los servicios' : esc(s) + ' servicio'}</button>`).join('')}</div>` : '';
+
+  let hero = '';
+  if (n) {
+    const counts = classes.map(c => c.asistentes.length);
+    const last = classes[n - 1];
+    const a8 = avg(counts.slice(-8)), p8 = avg(counts.slice(-16, -8));
+    const d = counts.length > 8 ? a8 - p8 : null;
+    const k = Math.min(16, n), shown = classes.slice(-k), vals = counts.slice(-k);
+    const max = Math.max(...vals, 1), W = 320, H = 120, gap = 4, bw = (W - gap * (k - 1)) / k;
+    const yAvg = H - (a8 / max) * (H - 18);
+    const bars = vals.map((v, i) => {
+      const h = Math.max(3, (v / max) * (H - 18)), x = i * (bw + gap), isLast = i === k - 1;
+      return `<a href="#/clase/${shown[i].id}"><rect x="${x.toFixed(1)}" y="${(H - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${isLast ? '#FFE14D' : 'rgba(255,255,255,.22)'}"><title>${fmtShort(shown[i].fecha)}: ${v} jóvenes</title></rect></a>`;
+    }).join('');
+    hero = `
+    <section class="hero" aria-label="Asistencia por clase">
+      <div class="hero-top">
+        <div>
+          <div class="hero-figure num">${last.asistentes.length}</div>
+          <p class="hero-cap">jóvenes en la última clase, <b>${fmtLong(last.fecha)}</b>${last.tema ? `: ${esc(last.tema)}` : ''}</p>
+        </div>
+      </div>
+      <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Asistentes en las últimas ${k} clases">
+        <line x1="0" x2="${W}" y1="${yAvg.toFixed(1)}" y2="${yAvg.toFixed(1)}" stroke="#9EA5C4" stroke-dasharray="3 4" stroke-width="1"/>
+        ${bars}
+      </svg>
+      <div class="axis"><span>${fmtShort(shown[0].fecha)}</span><span>${fmtShort(last.fecha)}</span></div>
+      <p class="hero-cap" style="max-width:none;margin-top:12px">La línea punteada es el promedio de las últimas 8 clases: <b class="num">${a8.toFixed(1).replace('.', ',')}</b> jóvenes${d != null && Math.abs(d) >= .05 ? `, ${Math.abs(d).toFixed(1).replace('.', ',')} ${d > 0 ? 'más' : 'menos'} que las 8 anteriores` : ''}.</p>
+    </section>`;
+  } else {
+    hero = `<section class="panel"><h2>Todavía no hay clases</h2><p class="muted small" style="margin-top:6px">Toma la primera lista para empezar a ver la asistencia.</p></section>`;
+  }
+
+  // seguimiento
+  const real = data.students.filter(s => !s.placeholder);
+  const riesgo = real.filter(s => per.get(s.id)?.estado === 'riesgo').sort((a, b) => per.get(b.id).pct - per.get(a.id).pct);
+  const seg = riesgo.length ? `
+    <section class="section">
+      <div class="section-head"><h2>Necesitan seguimiento</h2>${riesgo.length > 5 ? `<a class="link" href="#/jovenes" data-act="goFiltro" data-v="riesgo">Ver los ${riesgo.length}</a>` : ''}</div>
+      <div class="list">${riesgo.slice(0, 5).map(s => followRow(s, per.get(s.id))).join('')}</div>
+    </section>` : '';
+
+  // composición
+  const cnt = Object.fromEntries(ORDER.map(e => [e, 0]));
+  real.forEach(s => { const p = per.get(s.id); if (p) cnt[p.estado]++; });
+  const total = real.length || 1;
+  const comp = `
+    <section class="section">
+      <h2>Cómo está el grupo</h2>
+      <div class="panel" style="margin-top:10px">
+        <div class="comp" aria-hidden="true">${ORDER.filter(e => cnt[e]).map(e => `<span style="width:${cnt[e] / total * 100}%;background:${ESTADOS[e].color}"></span>`).join('')}</div>
+        <div class="legend">${ORDER.map(e => `<a href="#/jovenes" data-act="goFiltro" data-v="${e}"><span style="display:flex;align-items:center"><i class="dot" style="background:${ESTADOS[e].color}"></i>${ESTADOS[e].label}</span><b class="num">${cnt[e]}</b></a>`).join('')}</div>
+      </div>
+    </section>`;
+
+  // retención de nuevos
+  let ret = '';
+  if (n >= 6) {
+    const from = Math.max(1, n - 12), to = n - 2;
+    const newcomers = real.filter(s => { const p = per.get(s.id); return p && p.first != null && p.first >= from && p.first < to; });
+    if (newcomers.length) {
+      const back = newcomers.filter(s => per.get(s.id).asistidas >= 2).length;
+      ret = `
+      <section class="section">
+        <h2>Los que llegaron, ¿volvieron?</h2>
+        <div class="panel" style="margin-top:10px">
+          <p class="stat-line">De <b class="num">${newcomers.length}</b> ${newcomers.length === 1 ? 'joven que llegó' : 'jóvenes que llegaron'} por primera vez en las últimas 12 clases, <b class="num">${back}</b> ${back === 1 ? 'ha vuelto' : 'han vuelto'} al menos una vez más.</p>
+          <div class="meter"><span style="width:${back / newcomers.length * 100}%"></span></div>
+        </div>
+      </section>`;
+    }
+  }
+
+  // cumpleaños
+  const mes = new Date().getMonth();
+  const cumple = real.filter(s => s.fechaNacimiento && dateOf(s.fechaNacimiento).getMonth() === mes).sort((a, b) => dateOf(a.fechaNacimiento).getDate() - dateOf(b.fechaNacimiento).getDate());
+  const cum = cumple.length ? `
+    <section class="section"><h2>Cumpleaños de este mes</h2>
+      <div class="list" style="margin-top:10px">${cumple.map(s => `<a class="item" href="#/joven/${s.id}">${avatar(s)}<div class="body"><div class="name">${esc(fullName(s))}</div><div class="meta">${fmt(s.fechaNacimiento, {day: 'numeric', month: 'long'})}, ${dateOf(s.fechaNacimiento).getDate() >= new Date().getDate() ? `cumple ${ageOf(s) + (dateOf(s.fechaNacimiento).getDate() > new Date().getDate() ? 1 : 0)}` : `cumplió ${ageOf(s)}`}</div></div>${ic('chev', 'class="chev"')}</a>`).join('')}</div>
+    </section>` : '';
+
+  // temas
+  const top = classes.slice(-20).filter(c => c.tema).sort((a, b) => b.asistentes.length - a.asistentes.length).slice(0, 3);
+  const temas = top.length >= 2 ? `
+    <section class="section"><h2>Temas con más asistencia</h2>
+      <div class="panel" style="margin-top:10px;padding-top:6px;padding-bottom:6px">${top.map(c => `<a class="tema" href="#/clase/${c.id}"><span class="n num">${c.asistentes.length}</span><span><span class="t">${esc(c.tema)}</span><br><span class="muted small">${fmtShort(c.fecha)}${c.ponente ? `, con ${esc(c.ponente)}` : ''}</span></span></a>`).join('')}</div>
+    </section>` : '';
+
+  // por edad
+  const ages = {};
+  real.forEach(s => { const p = per.get(s.id); const a = ageOf(s); if (p && p.asistidas && a) { (ages[a] = ages[a] || []).push(p.pct); } });
+  const ak = Object.keys(ages).map(Number).sort((a, b) => a - b).filter(a => ages[a].length >= 2);
+  const edad = ak.length >= 2 ? `
+    <section class="section"><h2>Asistencia promedio por edad</h2>
+      <div class="panel bars-h" style="margin-top:10px">${ak.map(a => { const v = avg(ages[a]); return `<div class="r"><span>${a} años</span><span class="track"><span style="width:${v * 100}%"></span></span><span class="v num">${pctTxt(v)}</span></div>`; }).join('')}
+      <p class="hint" style="margin-top:8px">Solo jóvenes que han venido al menos una vez.</p></div>
+    </section>` : '';
+
+  const sinCel = real.filter(sinContacto);
+  const sinCelRiesgo = sinCel.filter(s => ['riesgo', 'constante', 'ocasional', 'nuevo'].includes(per.get(s.id)?.estado)).length;
+  const alertCel = sinCel.length ? `<div class="alert-card" role="status"><span class="aic">${ic('phoneOff')}</span><div>
+      <b>${sinCel.length === 1 ? '1 joven no tiene' : `${sinCel.length} jóvenes no tienen`} celular de contacto</b>
+      <p>${sinCelRiesgo ? `${sinCelRiesgo} de ${sinCel.length === 1 ? 'él' : 'ellos'} ${sinCelRiesgo === 1 ? 'sigue' : 'siguen'} viniendo. ` : ''}Sin un número no puedes avisar a su acudiente cuando falta.</p>
+      <a class="link" href="#/jovenes" data-act="goFiltro" data-v="sincontacto">Ver y completar</a></div></div>` : '';
+  setView(topbar(esc(S.grupo), '', '', `<a class="icon-btn" href="#/estadisticas" aria-label="Estadísticas">${ic('chart')}</a><button class="icon-btn" data-act="newStudent" aria-label="Agregar joven">${ic('plus')}</button>`) + chips + hero +
+    `<div class="quick"><a class="btn hl" href="#/lista">${ic('check')}Tomar lista</a><button class="btn ghost" data-act="newStudent">${ic('plus')}Nuevo joven</button></div>` +
+    `<a class="stats-link" href="#/estadisticas"><span class="ic2">${ic('chart')}</span><span style="flex:1">Panel de estadísticas<small>Promedios, edades, cursos y descarga en Excel</small></span>${ic('chev', 'class="chev"')}</a>` +
+    alertCel + seg + comp + ret + cum + temas + edad);
+}
+function followRow(s, p) {
+  const nm = (s.nombres || '').split(' ')[0] || fullName(s);
+  const msg = `Hola${s.acudiente ? ' ' + s.acudiente.trim().split(' ')[0] : ''}, te saludamos del grupo de jóvenes. Hemos extrañado a ${nm} en las últimas clases. ¿Todo bien? Nos encantaría verle el domingo.`;
+  const wa = waLink(s.telefono, msg);
+  return `<div class="item">
+    <a href="#/joven/${s.id}" style="display:contents">${avatar(s)}<div class="body"><div class="name">${esc(fullName(s))}</div><div class="meta wrap">Faltó a las últimas ${p.seguidas} clases. Venía al ${pctTxt(p.pct)}.${wa ? '' : ` <span class="nophone">${ic('phoneOff')}Sin celular</span>`}</div></div></a>
+    ${wa ? `<a class="wa" href="${wa}" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp a su acudiente">${ic('wa')}</a>` : `<a href="#/joven/${s.id}" aria-label="Ver perfil">${ic('chev', 'class="chev"')}</a>`}
+  </div>`;
+}
+
+/* =========================================================
+   JÓVENES
+   ========================================================= */
+function viewStudents() {
+  const st = stats(curServicio());
+  setView(topbar('Jóvenes', plural(data.students.filter(s => !s.placeholder).length, 'registrado'), '', `<button class="icon-btn" data-act="exportXLSX" aria-label="Descargar Excel">${ic('download')}</button><button class="icon-btn solid" data-act="newStudent" aria-label="Agregar joven">${ic('plus')}</button>`) + `
+    <div class="search"><label class="sr" for="q">Buscar joven</label>${ic('search')}<input id="q" class="input" type="search" placeholder="Buscar por nombre o acudiente" value="${esc(ui.q)}" autocomplete="off"></div>
+    <div class="chips" id="fchips" style="margin-top:10px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 2px 10px;gap:10px">
+      <span class="muted small" id="rescount"></span>
+      <label class="small muted" style="display:flex;align-items:center;gap:6px">Ordenar
+        <select class="input" id="orden" style="min-height:38px;width:auto;padding:6px 34px 6px 10px;font-size:14px;background-color:var(--surface)">
+          <option value="pct">Asistencia</option><option value="nombre">Nombre</option><option value="seguidas">Ausencias seguidas</option><option value="edad">Edad</option><option value="reciente">Más recientes</option>
+        </select></label>
+    </div>
+    <div id="slist"></div>`);
+  $('#orden').value = ui.orden;
+  $('#q').addEventListener('input', e => { ui.q = e.target.value; drawStudents(st); });
+  $('#orden').addEventListener('change', e => { ui.orden = e.target.value; drawStudents(st); });
+  drawStudents(st);
+}
+function drawStudents(st) {
+  const {per} = st;
+  const counts = {todos: 0, identificar: 0, sincontacto: 0};
+  ORDER.forEach(e => counts[e] = 0);
+  data.students.forEach(s => { if (s.placeholder) { counts.identificar++; return; } counts.todos++; counts[per.get(s.id).estado]++; if (sinContacto(s)) counts.sincontacto++; });
+  const opts = [['todos', 'Todos'], ...ORDER.map(e => [e, ESTADOS[e].label])];
+  opts.push(['sincontacto', 'Sin celular']);
+  if (counts.identificar) opts.push(['identificar', 'Por identificar']);
+  $('#fchips').innerHTML = opts.filter(([k]) => k === 'todos' || counts[k]).map(([k, l]) => `<button class="chip" data-act="filtro" data-v="${k}" aria-pressed="${ui.filtro === k}">${l}<span class="c num">${counts[k]}</span></button>`).join('');
+  const q = norm(ui.q);
+  let list = data.students.filter(s => {
+    if (ui.filtro === 'identificar') { if (!s.placeholder) return false; }
+    else if (s.placeholder) return false;
+    else if (ui.filtro === 'sincontacto') { if (!sinContacto(s)) return false; }
+    else if (ui.filtro !== 'todos' && per.get(s.id).estado !== ui.filtro) return false;
+    return !q || norm(fullName(s) + ' ' + (s.acudiente || '')).includes(q);
+  });
+  const by = {
+    pct: (a, b) => per.get(b.id).pct - per.get(a.id).pct || per.get(b.id).asistidas - per.get(a.id).asistidas,
+    nombre: (a, b) => fullName(a).localeCompare(fullName(b), 'es'),
+    seguidas: (a, b) => per.get(b.id).seguidas - per.get(a.id).seguidas,
+    edad: (a, b) => (ageOf(a) || 0) - (ageOf(b) || 0),
+    reciente: (a, b) => (per.get(b.id).firstFecha || b.fechaIngreso || '').localeCompare(per.get(a.id).firstFecha || a.fechaIngreso || ''),
+  };
+  list.sort(by[ui.orden] || by.pct);
+  $('#rescount').textContent = plural(list.length, 'joven', 'jóvenes');
+  $('#slist').innerHTML = list.length ? `<div class="list">${list.map(s => {
+    const p = per.get(s.id), a = ageOf(s);
+    const meta = s.placeholder ? `${plural(p.asistidas, 'asistencia')} sin vincular` : [a ? `${a} años` : '', s.curso ? esc(s.curso) : '', p.relevant ? `${p.asistidas} de ${p.relevant} clases` : 'Sin clases aún'].filter(Boolean).join(', ') + (sinContacto(s) ? ` <span class="nophone">${ic('phoneOff')}Sin celular</span>` : '');
+    return `<a class="item" href="#/joven/${s.id}">${avatar(s)}<div class="body"><div class="name">${esc(fullName(s))}</div><div class="meta">${meta}</div><div class="line2">${stripHTML(p.strip)}</div></div>
+      <div class="end">${p.relevant ? `<span class="pct num">${pctTxt(p.pct)}</span>` : ''}${s.placeholder ? '' : badge(p.estado)}</div></a>`;
+  }).join('')}</div>` : `<div class="empty"><h2>No hay jóvenes con ese filtro</h2><p>Prueba con otro nombre o quita el filtro.</p><button class="btn ghost" data-act="filtro" data-v="todos">Ver todos</button></div>`;
+}
+
+/* ---------- perfil ---------- */
+function viewStudent(id) {
+  const s = DB.student(id);
+  if (!s) { setView(topbar('No encontrado', '', backBtn('#/jovenes')) + `<div class="empty"><p>Este joven ya no existe.</p><a class="btn ghost" href="#/jovenes">Volver a jóvenes</a></div>`); return; }
+  const st = stats(curServicio()); const p = st.per.get(s.id); const a = ageOf(s);
+  const nm = (s.nombres || '').split(' ')[0] || 'tu hijo(a)';
+  const wa = waLink(s.telefono, `Hola${s.acudiente ? ' ' + s.acudiente.trim().split(' ')[0] : ''}, te saludamos del grupo de jóvenes. Queríamos saber cómo está ${nm}.`);
+  const tel = String(s.telefono || '').replace(/[^\d+]/g, '');
+
+  // por mes
+  const months = new Map();
+  st.classes.forEach((c, i) => { if (i < p.start) return; const k = c.fecha.slice(0, 7); if (!months.has(k)) months.set(k, []); months.get(k).push(p.set.has(i) ? 1 : 0); });
+  const mk = [...months.keys()].reverse().slice(0, 8);
+  const hist = st.classes.map((c, i) => ({c, i})).filter(x => x.i >= p.start).reverse().slice(0, 12);
+
+  const placeholderBox = s.placeholder ? `
+    <div class="notice" style="margin-top:16px">
+      <b>Este registro viene de una clase importada</b>, pero el joven no estaba en el archivo de jóvenes. Vincúlalo con el joven correcto para unir sus ${p.asistidas} asistencias.
+      <label class="field"><span>Joven correcto</span><select class="input" id="mergeTo"><option value="">Elige un joven</option>${data.students.filter(x => !x.placeholder).sort((a, b) => fullName(a).localeCompare(fullName(b), 'es')).map(x => `<option value="${x.id}">${esc(fullName(x))}</option>`).join('')}</select></label>
+      <button class="btn primary block" style="margin-top:12px" data-act="merge" data-id="${s.id}">${ic('link')}Vincular asistencias</button>
+    </div>` : '';
+
+  setView(topbar('', '', backBtn('#/jovenes'), `<button class="icon-btn" data-act="editStudent" data-id="${s.id}" aria-label="Editar datos">${ic('edit')}</button>`) + `
+    <div class="profile">${avatar(s, 'lg')}<div><h2>${esc(fullName(s))}</h2>
+      <p class="muted">${[a ? `${a} años` : '', s.curso ? `Curso ${esc(s.curso)}` : '', s.acudiente ? `Acudiente: ${esc(s.acudiente)}` : ''].filter(Boolean).join('. ')}</p>
+      <div style="margin-top:8px">${s.placeholder ? '' : badge(p.estado)}</div></div></div>
+    ${(wa || tel) ? `<div class="row-btns" style="margin-top:16px">${wa ? `<a class="btn ghost" href="${wa}" target="_blank" rel="noopener">${ic('wa')}WhatsApp</a>` : ''}${tel ? `<a class="btn ghost" href="tel:${esc(tel)}">${ic('phone')}Llamar</a>` : ''}</div>` : ''}
+    ${sinContacto(s) ? `<div class="alert-card"><span class="aic">${ic('phoneOff')}</span><div><b>Falta el celular del acudiente</b><p>Agrégalo para poder avisar cuando ${esc((s.nombres || '').split(' ')[0] || 'este joven')} falte.</p><button class="link" data-act="editStudent" data-id="${s.id}" data-focus="telefono">Agregar celular</button></div></div>` : ''}
+    ${placeholderBox}
+    <div class="kpis">
+      <div class="kpi dark"><div class="k num">${p.relevant ? pctTxt(p.pct) : '—'}</div><div class="l">${p.relevant ? `Vino a ${p.asistidas} de ${p.relevant} clases desde que llegó` : 'Aún no hay clases desde su ingreso'}</div></div>
+      <div class="kpi"><div class="k num">${p.actual}</div><div class="l">${p.actual === 1 ? 'Clase seguida' : 'Clases seguidas'} hasta hoy. Mejor racha: ${p.best}</div></div>
+      <div class="kpi"><div class="k num">${p.seguidas}</div><div class="l">${p.seguidas === 1 ? 'Ausencia' : 'Ausencias'} desde su última clase</div></div>
+      <div class="kpi"><div class="k" style="font-size:22px;line-height:1.1">${p.lastFecha ? fmtShort(p.lastFecha) : '—'}</div><div class="l">Última asistencia${p.firstFecha ? `. Primera: ${fmtShort(p.firstFecha)}` : ''}</div></div>
+    </div>
+    ${mk.length ? `<section class="section"><h2>Asistencia por mes</h2><div class="panel months" style="margin-top:10px;padding-top:6px;padding-bottom:6px">${mk.map(k => { const v = months.get(k); return `<div class="m"><span class="lbl">${dateOf(k + '-15').toLocaleDateString('es-CO', {month: 'short'}).replace('.', '') + ' ' + k.slice(2, 4)}</span><span class="dots">${v.map(x => `<i class="${x ? 'y' : ''}"></i>`).join('')}</span><span class="c num">${v.filter(Boolean).length}/${v.length}</span></div>`; }).join('')}</div></section>` : ''}
+    ${hist.length ? `<section class="section"><h2>Últimas clases</h2><div class="panel hist" style="margin-top:10px;padding-top:4px;padding-bottom:4px">${hist.map(({c, i}) => { const y = p.set.has(i); return `<a class="h" href="#/clase/${c.id}"><span class="mark ${y ? 'y' : ''}" aria-label="${y ? 'Asistió' : 'Faltó'}">${y ? ic('check') : ''}</span><span class="t"><b>${esc(c.tema || 'Clase sin tema')}</b><small>${fmtLong(c.fecha)}${y ? '' : '. Faltó'}</small></span></a>`; }).join('')}</div></section>` : ''}
+    ${s.notas ? `<section class="section"><h2>Notas</h2><div class="panel" style="margin-top:10px;white-space:pre-wrap">${esc(s.notas)}</div></section>` : ''}
+    ${s.fechaIngreso || s.fechaNacimiento ? `<p class="hint" style="margin-top:18px">${[s.fechaIngreso ? `Ingresó el ${fmt(s.fechaIngreso, {day: 'numeric', month: 'long', year: 'numeric'})}` : '', s.fechaNacimiento ? `Nació el ${fmt(s.fechaNacimiento, {day: 'numeric', month: 'long', year: 'numeric'})}` : ''].filter(Boolean).join('. ')}.</p>` : ''}
+  `);
+}
+
+/* ---------- formulario de joven ---------- */
+function studentSheet(id, opts = {}) {
+  const s = id ? DB.student(id) : {nombres: '', apellidos: '', fechaIngreso: todayISO()};
+  openSheet(`
+    <h2>${id ? 'Editar datos' : 'Nuevo joven'}</h2>
+    <form id="sform" autocomplete="off">
+      <div class="grid2">
+        <label class="field"><span>Nombres</span><input class="input" name="nombres" value="${esc(s.nombres)}" required autocapitalize="words"></label>
+        <label class="field"><span>Apellidos</span><input class="input" name="apellidos" value="${esc(s.apellidos)}" autocapitalize="words"></label>
+      </div>
+      <div class="grid2">
+        <label class="field"><span>Fecha de nacimiento</span><input class="input" type="date" name="fechaNacimiento" value="${esc(s.fechaNacimiento || '')}"></label>
+        <label class="field"><span>Edad</span><input class="input" type="number" inputmode="numeric" min="5" max="30" name="edad" value="${esc(s.edad || '')}" placeholder="Si no hay fecha"></label>
+      </div>
+      <label class="field"><span>Curso o grado</span><input class="input" name="curso" list="cursos" value="${esc(s.curso || '')}" placeholder="Ej. 7°"><datalist id="cursos">${[...new Set(data.students.map(x => (x.curso || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es', {numeric: true})).map(c => `<option value="${esc(c)}">`).join('')}</datalist></label>
+      <label class="field"><span>Acudiente</span><input class="input" name="acudiente" value="${esc(s.acudiente || '')}" autocapitalize="words"></label>
+      <label class="field"><span>Celular del acudiente</span><input class="input" type="tel" inputmode="tel" name="telefono" value="${esc(s.telefono || '')}" placeholder="300 123 4567"></label>
+      <label class="field"><span>Fecha de ingreso al grupo</span><input class="input" type="date" name="fechaIngreso" value="${esc(s.fechaIngreso || '')}"></label>
+      <label class="field"><span>Notas</span><textarea class="input" name="notas" placeholder="Colegio, intereses, motivos de oración, alergias">${esc(s.notas || '')}</textarea></label>
+      <div class="actions"><button type="button" class="btn ghost" data-act="closeSheet">Cancelar</button><button class="btn primary" type="submit">${id ? 'Guardar cambios' : (opts.classId ? 'Agregar y marcar presente' : 'Agregar joven')}</button></div>
+      ${id && Auth.isSuper() ? `<button type="button" class="btn danger block" style="margin-top:12px" data-act="deleteStudent" data-id="${id}">${ic('trash')}Eliminar joven</button>` : ''}
+    </form>`, sh => {
+    sh.querySelector('#sform').addEventListener('submit', async e => {
+      e.preventDefault();
+      const f = Object.fromEntries(new FormData(e.target));
+      Object.keys(f).forEach(k => f[k] = String(f[k]).trim());
+      if (!f.nombres) return;
+      const saved = await DB.saveStudent(Object.assign(id ? {id} : {}, f, {placeholder: false}));
+      if (opts.classId) await DB.setAttendance(opts.classId, saved.id, true);
+      closeSheet();
+      toast(id ? 'Cambios guardados' : (opts.classId ? `${shortName(saved)} agregado y presente` : `${shortName(saved)} agregado`));
+      render();
+    });
+    if (!id) setTimeout(() => sh.querySelector('[name=nombres]').focus(), 250);
+    else if (opts.focus) setTimeout(() => { const el = sh.querySelector(`[name=${opts.focus}]`); if (el) { el.scrollIntoView({block: 'center'}); el.focus(); } }, 250);
+  });
+}
+
+/* =========================================================
+   TOMAR LISTA
+   ========================================================= */
+function viewListStart() {
+  const serv = data.settings.servicio || servicios()[0] || '';
+  const today = data.classes.find(c => c.fecha === todayISO() && (!serv || c.servicio === serv));
+  if (today) { location.replace('#/lista/' + today.id); return; }
+  const recent = data.classes.slice().sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 3);
+  setView(topbar('Tomar lista', 'Primero, los datos de la clase') + `
+    <form id="cform" class="panel" autocomplete="off">
+      ${classFields({fecha: todayISO(), servicio: serv})}
+      <button class="btn hl block" type="submit" style="margin-top:20px">${ic('check')}Empezar a marcar</button>
+    </form>
+    ${recent.length ? `<section class="section"><h2>O continúa una lista reciente</h2><div class="list" style="margin-top:10px">${recent.map(classRow).join('')}</div></section>` : ''}`);
+  $('#cform').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.target)); Object.keys(f).forEach(k => f[k] = String(f[k]).trim());
+    const me = Auth.session(); const c = await DB.saveClass(Object.assign(f, {asistentes: [], registradoPor: me.nombre, registradoPorId: me.uid}));
+    location.hash = '#/lista/' + c.id;
+  });
+}
+function classFields(c) {
+  const servs = servicios();
+  return `
+    <div class="grid2">
+      <label class="field" style="margin-top:0"><span>Fecha</span><input class="input" type="date" name="fecha" value="${esc(c.fecha || todayISO())}" required></label>
+      <label class="field" style="margin-top:0"><span>Servicio</span><input class="input" name="servicio" list="servs" value="${esc(c.servicio || '')}" placeholder="Segundo"><datalist id="servs">${servs.map(s => `<option value="${esc(s)}">`).join('')}</datalist></label>
+    </div>
+    <label class="field"><span>Tema</span><input class="input" name="tema" value="${esc(c.tema || '')}" placeholder="¿De qué se habló hoy?"></label>
+    <label class="field"><span>Quién dio la clase</span><input class="input" name="ponente" value="${esc(c.ponente || '')}" placeholder="Opcional"></label>`;
+}
+function viewRoster(id) {
+  const c = DB.cls(id);
+  if (!c) { location.replace('#/lista'); return; }
+  setView(topbar(esc(c.tema || 'Lista de asistencia'), `${fmtLong(c.fecha)}${c.servicio ? `, ${esc(c.servicio)} servicio` : ''}`, backBtn('#/clase/' + c.id), `<a class="btn primary" style="min-height:40px;padding:0 16px" href="#/clase/${c.id}">Listo</a>`).replace('class="top"', 'class="top" style="position:static"') + `
+    <div class="roster-bar">
+      <div class="count-line"><span><span class="big num" id="pcount">${c.asistentes.length}</span> <span class="of">presentes</span></span><span class="of" id="pof"></span></div>
+      <div class="search"><label class="sr" for="rq">Buscar en la lista</label>${ic('search')}<input id="rq" class="input" type="search" placeholder="Buscar nombre" value="${esc(ui.rq)}" autocomplete="off"></div>
+      <div class="chips" style="margin-top:10px" role="group" aria-label="Orden">
+        ${[['frecuentes', 'Frecuentes primero'], ['az', 'A a Z'], ['faltan', 'Sin marcar']].map(([k, l]) => `<button class="chip" data-act="rsort" data-v="${k}" aria-pressed="${ui.rsort === k}">${l}</button>`).join('')}
+      </div>
+    </div>
+    <div id="roster"></div>
+    <button class="btn ghost block" style="margin-top:16px" data-act="newStudent" data-class="${c.id}">${ic('plus')}Agregar joven que vino por primera vez</button>`);
+  $('#rq').addEventListener('input', e => { ui.rq = e.target.value; drawRoster(c); });
+  drawRoster(c);
+}
+function drawRoster(c) {
+  const st = stats(c.servicio || 'Todos');
+  const present = new Set(c.asistentes);
+  const q = norm(ui.rq);
+  let list = data.students.filter(s => !s.placeholder || present.has(s.id));
+  const sorters = {
+    frecuentes: (a, b) => (st.per.get(b.id)?.pct || 0) - (st.per.get(a.id)?.pct || 0) || fullName(a).localeCompare(fullName(b), 'es'),
+    az: (a, b) => fullName(a).localeCompare(fullName(b), 'es'),
+    faltan: (a, b) => (present.has(a.id) - present.has(b.id)) || (st.per.get(b.id)?.pct || 0) - (st.per.get(a.id)?.pct || 0),
+  };
+  list.sort(sorters[ui.rsort]);
+  if (q) list = list.filter(s => norm(fullName(s)).includes(q));
+  const isOff = s => st.per.get(s.id)?.estado === 'inactivo' && !present.has(s.id);
+  const main = q ? list : list.filter(s => !isOff(s));
+  const off = q ? [] : list.filter(isOff);
+  const tile = s => { const a = ageOf(s); const p = st.per.get(s.id); return `<button class="tile" data-act="toggle" data-id="${s.id}" aria-pressed="${present.has(s.id)}">${avatar(s)}<span class="tn"><b>${esc(shortName(s))}</b><small>${a ? a + ' años' : ''}${p && p.relevant ? `${a ? ', ' : ''}${pctTxt(p.pct)}` : ''}</small></span></button>`; };
+  $('#pof').textContent = `de ${data.students.filter(s => !s.placeholder).length} en el grupo`;
+  $('#roster').innerHTML = (main.length ? `<div class="roster">${main.map(tile).join('')}</div>` : `<div class="empty" style="padding:24px"><p>${q ? 'Nadie con ese nombre. Si es nuevo, agrégalo abajo.' : 'Aún no hay jóvenes. Agrega el primero abajo.'}</p></div>`) +
+    (off.length ? `<button class="btn ghost block more-toggle" data-act="showInactive">${ui.showInactive ? 'Ocultar' : 'Mostrar'} ${plural(off.length, 'joven inactivo', 'jóvenes inactivos')}</button>${ui.showInactive ? `<div class="roster">${off.map(tile).join('')}</div>` : ''}` : '');
+}
+
+/* =========================================================
+   CLASES
+   ========================================================= */
+function classRow(c) {
+  const max = Math.max(1, ...data.classes.map(x => x.asistentes.length));
+  return `<a class="item" href="#/clase/${c.id}"><div class="date-block"><b class="num">${dateOf(c.fecha).getDate()}</b><small>${fmt(c.fecha, {weekday: 'short'}).replace('.', '')}</small></div>
+    <div class="body"><div class="name">${esc(c.tema || 'Clase sin tema')}</div><div class="meta">${[fmt(c.fecha, {month: 'long'}), c.servicio ? esc(c.servicio) + ' servicio' : '', c.ponente ? 'con ' + esc(c.ponente) : ''].filter(Boolean).join(', ')}</div></div>
+    <div class="end"><span class="cnt num">${c.asistentes.length}</span><span class="mini"><span style="width:${c.asistentes.length / max * 100}%"></span></span></div></a>`;
+}
+function viewClasses() {
+  setView(topbar('Clases', plural(data.classes.length, 'clase registrada', 'clases registradas'), '', `<a class="icon-btn solid" href="#/lista" aria-label="Nueva clase">${ic('plus')}</a>`) + `
+    <div class="search"><label class="sr" for="cq">Buscar clase</label>${ic('search')}<input id="cq" class="input" type="search" placeholder="Buscar por tema o quién la dio" value="${esc(ui.cq)}" autocomplete="off"></div>
+    <div id="clist"></div>`);
+  $('#cq').addEventListener('input', e => { ui.cq = e.target.value; drawClasses(); });
+  drawClasses();
+}
+function drawClasses() {
+  const q = norm(ui.cq);
+  const list = data.classes.filter(c => !q || norm((c.tema || '') + ' ' + (c.ponente || '') + ' ' + (c.servicio || '')).includes(q)).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  if (!list.length) { $('#clist').innerHTML = `<div class="empty"><h2>${q ? 'Sin resultados' : 'Aún no hay clases'}</h2><p>${q ? 'Prueba con otra palabra del tema.' : 'Cada vez que tomas lista se crea una clase.'}</p>${q ? '' : `<a class="btn hl" href="#/lista">${ic('check')}Tomar la primera lista</a>`}</div>`; return; }
+  const groups = new Map();
+  list.forEach(c => { const k = c.fecha.slice(0, 7); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(c); });
+  $('#clist').innerHTML = [...groups].map(([k, cs]) => `<h3 class="month-h">${dateOf(k + '-15').toLocaleDateString('es-CO', {month: 'long', year: 'numeric'})}</h3><div class="list">${cs.map(classRow).join('')}</div>`).join('');
+}
+function viewClass(id) {
+  const c = DB.cls(id);
+  if (!c) { setView(topbar('No encontrada', '', backBtn('#/clases')) + `<div class="empty"><p>Esta clase ya no existe.</p><a class="btn ghost" href="#/clases">Volver a clases</a></div>`); return; }
+  const st = stats(c.servicio || 'Todos');
+  const present = new Set(c.asistentes);
+  const att = c.asistentes.map(DB.student).filter(Boolean).sort((a, b) => fullName(a).localeCompare(fullName(b), 'es'));
+  const idx = st.classes.findIndex(x => x.id === c.id);
+  const missing = data.students.filter(s => !s.placeholder && !present.has(s.id)).filter(s => { const p = st.per.get(s.id); return p && p.start <= idx && p.pct >= .6 && p.asistidas >= 4; }).sort((a, b) => st.per.get(b.id).pct - st.per.get(a.id).pct);
+  const newHere = att.filter(s => st.per.get(s.id)?.first === idx);
+  const ranks = st.classes.map(x => x.asistentes.length);
+  const avgAll = avg(ranks);
+  const personChip = s => `<a class="person" href="#/joven/${s.id}">${avatar(s)}${esc(shortName(s))}</a>`;
+  setView(topbar('', '', backBtn('#/clases'), `<button class="icon-btn" data-act="editClass" data-id="${c.id}" aria-label="Editar clase">${ic('edit')}</button>`) + `
+    <p class="muted" style="text-transform:capitalize">${fmtLong(c.fecha)}${c.servicio ? `, ${esc(c.servicio)} servicio` : ''}</p>
+    <h2 style="font-size:28px;font-weight:800;margin-top:4px;letter-spacing:-.02em">${esc(c.tema || 'Clase sin tema')}</h2>
+    ${c.ponente ? `<p class="muted" style="margin-top:4px">Con ${esc(c.ponente)}</p>` : ''}
+    <div class="kpis">
+      <div class="kpi dark"><div class="k num">${c.asistentes.length}</div><div class="l">jóvenes asistieron</div></div>
+      <div class="kpi"><div class="k num">${avgAll ? (c.asistentes.length - avgAll >= 0 ? '+' : '−') + Math.abs(c.asistentes.length - avgAll).toFixed(1).replace('.', ',') : '—'}</div><div class="l">frente al promedio de ${avgAll.toFixed(1).replace('.', ',')} por clase</div></div>
+    </div>
+    <a class="btn hl block" style="margin-top:12px" href="#/lista/${c.id}">${ic('check')}Editar asistencia</a>
+    ${newHere.length ? `<section class="section"><h2>Primera vez</h2><div class="people" style="margin-top:10px">${newHere.map(personChip).join('')}</div></section>` : ''}
+    ${missing.length ? `<section class="section"><h2>Faltaron de los que suelen venir</h2><div class="people" style="margin-top:10px">${missing.slice(0, 12).map(personChip).join('')}</div></section>` : ''}
+    ${c.registradoPor ? `<p class="hint" style="margin-top:10px">Lista tomada por ${esc(c.registradoPor)}.</p>` : ''}
+    <section class="section"><h2>Asistieron</h2>${att.length ? `<div class="people" style="margin-top:10px">${att.map(personChip).join('')}</div>` : `<p class="muted" style="margin-top:6px">Nadie marcado todavía.</p>`}</section>
+    ${c.notas ? `<section class="section"><h2>Notas</h2><div class="panel" style="margin-top:10px;white-space:pre-wrap">${esc(c.notas)}</div></section>` : ''}`);
+}
+function classSheet(id) {
+  const c = DB.cls(id);
+  openSheet(`<h2>Editar clase</h2><form id="ceform" autocomplete="off" style="margin-top:14px">${classFields(c)}
+    <label class="field"><span>Notas</span><textarea class="input" name="notas" placeholder="Actividad, versículo, observaciones">${esc(c.notas || '')}</textarea></label>
+    <div class="actions"><button type="button" class="btn ghost" data-act="closeSheet">Cancelar</button><button class="btn primary" type="submit">Guardar cambios</button></div>
+    ${Auth.isSuper() ? `<button type="button" class="btn danger block" style="margin-top:12px" data-act="deleteClass" data-id="${id}">${ic('trash')}Eliminar clase</button>` : ''}</form>`, sh => {
+    sh.querySelector('#ceform').addEventListener('submit', async e => {
+      e.preventDefault();
+      const f = Object.fromEntries(new FormData(e.target)); Object.keys(f).forEach(k => f[k] = String(f[k]).trim());
+      await DB.saveClass(Object.assign({id}, f)); closeSheet(); toast('Cambios guardados'); render();
+    });
+  });
+}
+
+/* =========================================================
+   MÁS: importar, exportar, ajustes
+   ========================================================= */
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+function viewMore() {
+  const S = data.settings; const servs = servicios();
+  const me = Auth.session(), sup = me.rol === 'superadmin';
+  const inits = me.nombre.split(/\s+/).map(x => x[0]).slice(0, 2).join('').toUpperCase();
+  setView(topbar('Más') + `
+    <div class="panel acct">
+      <div class="av" aria-hidden="true"><span>${esc(inits)}</span></div>
+      <div style="flex:1;min-width:0"><div style="font-weight:600">${esc(me.nombre)}</div><div class="small muted">${ROLES[me.rol]}. Usuario: ${esc(me.usuario)}</div>${CLOUD ? `<div class="small muted" id="syncstatus" style="margin-top:2px">${esc(Sync.status())}</div>` : ''}</div>
+      ${CLOUD ? `<button class="icon-btn" data-act="syncNow" aria-label="Sincronizar ahora">${ic('refresh')}</button>` : ''}
+    </div>
+    <div class="list menu" style="margin-top:10px">
+      ${sup ? `<a class="item" href="#/uso"><span class="ic">${ic('gauge')}</span><div class="body"><div class="name">Uso de servicios</div><div class="meta">Supabase y GitHub Pages, plan gratuito</div></div>${ic('chev', 'class="chev"')}</a>` : ''}
+      ${sup ? `<a class="item" href="#/profesores"><span class="ic">${ic('users')}</span><div class="body"><div class="name">Profesores</div><div class="meta">Crear, editar y eliminar cuentas</div></div>${ic('chev', 'class="chev"')}</a>` : ''}
+      <button class="item" data-act="changePw"><span class="ic">${ic('key')}</span><div class="body"><div class="name">Cambiar mi contraseña</div><div class="meta">Recomendado si te dieron una temporal</div></div></button>
+      <button class="item" data-act="logout"><span class="ic">${ic('logout')}</span><div class="body"><div class="name">Cerrar sesión</div><div class="meta">Para dejar de usar Pulso en este celular</div></div></button>
+      ${installEvt ? `<button class="item" data-act="install"><span class="ic">${ic('phoneApp')}</span><div class="body"><div class="name">Instalar en este celular</div><div class="meta">Abre Pulso como una app, sin navegador</div></div></button>` : ''}
+    </div>
+
+    <section class="section"><h2>Reportes y copias</h2>
+    <div class="list menu" style="margin-top:10px">
+      ${sup ? `<a class="item" href="#/importar"><span class="ic">${ic('upload')}</span><div class="body"><div class="name">Importar datos</div><div class="meta">Jóvenes y clases desde archivos CSV</div></div>${ic('chev', 'class="chev"')}</a>` : ''}
+      <a class="item" href="#/estadisticas"><span class="ic">${ic('chart')}</span><div class="body"><div class="name">Panel de estadísticas</div><div class="meta">Promedios, edades, cursos y servicios</div></div>${ic('chev', 'class="chev"')}</a>
+      <button class="item" data-act="exportXLSX"><span class="ic">${ic('file')}</span><div class="body"><div class="name">Descargar Excel de jóvenes</div><div class="meta">Datos, asistencia por clase, clases y resumen</div></div></button>
+      ${sup ? `<button class="item" data-act="exportJSON"><span class="ic">${ic('download')}</span><div class="body"><div class="name">Descargar copia de seguridad</div><div class="meta">Todo en un archivo para restaurar después</div></div></button>
+      <label class="item" style="cursor:pointer"><span class="ic">${ic('upload')}</span><div class="body"><div class="name">Restaurar copia de seguridad</div><div class="meta">Reemplaza los datos actuales</div></div><input type="file" accept=".json,application/json" id="restore" class="sr"></label>` : ''}
+    </div></section>
+
+    ${sup ? `<section class="section"><h2>Ajustes del grupo</h2>
+      <form id="setform" class="panel" style="margin-top:10px">
+        <label class="field" style="margin-top:0"><span>Nombre del grupo</span><input class="input" name="grupo" value="${esc(S.grupo)}"></label>
+        <label class="field"><span>Servicio que más usan</span><select class="input" name="servicio"><option value="">Ninguno en particular</option>${servs.map(s => `<option ${s === S.servicio ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></label>
+        <div class="grid2">
+          <label class="field"><span>En riesgo tras</span><select class="input" name="riesgo">${[2, 3, 4, 5].map(v => `<option value="${v}" ${v == S.riesgo ? 'selected' : ''}>${v} ausencias</option>`).join('')}</select></label>
+          <label class="field"><span>Inactivo tras</span><select class="input" name="inactivo">${[6, 8, 10, 12].map(v => `<option value="${v}" ${v == S.inactivo ? 'selected' : ''}>${v} ausencias</option>`).join('')}</select></label>
+        </div>
+        <p class="hint">Ausencias seguidas, contando desde la última vez que vino.</p>
+        <button class="btn primary block" type="submit" style="margin-top:16px">Guardar ajustes</button>
+      </form>
+    </section>
+
+    <section class="section"><h2>Datos</h2>
+      <div class="panel" style="margin-top:10px">
+        <p class="small muted">${CLOUD ? 'Los datos se guardan en Supabase y se sincronizan entre los celulares de los profesores. Si no hay señal, los cambios esperan en el celular y se envían al volver.' : storageOK ? 'Por ahora los datos y las cuentas se guardan solo en este dispositivo. Descarga una copia de seguridad con frecuencia hasta que conectemos Supabase.' : 'Este navegador no permite guardar datos. Lo que hagas se perderá al cerrar.'}</p>
+        <div class="row-btns" style="margin-top:12px">${CLOUD ? '' : `<button class="btn ghost" data-act="demo">${ic('spark')}Datos de ejemplo</button>`}<button class="btn danger" data-act="wipe">${ic('trash')}Borrar todo</button></div>
+      </div>
+    </section>` : ''}`);
+  if (!sup) return;
+  $('#setform').addEventListener('submit', async e => {
+    e.preventDefault(); const f = Object.fromEntries(new FormData(e.target));
+    await DB.saveSettings({grupo: f.grupo.trim() || 'Grupo de jóvenes', servicio: f.servicio, riesgo: Number(f.riesgo), inactivo: Number(f.inactivo)});
+    ui.servicio = null; toast('Ajustes guardados');
+  });
+  $('#restore').addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      const d = JSON.parse(await file.text());
+      if (!Array.isArray(d.students) || !Array.isArray(d.classes)) throw 0;
+      confirmSheet('¿Restaurar esta copia?', `Tiene ${plural(d.students.length, 'joven', 'jóvenes')} y ${plural(d.classes.length, 'clase')}. Los datos actuales se reemplazarán.`, 'Restaurar copia', async () => { await DB.replaceAll(d); toast('Copia restaurada'); location.hash = '#/inicio'; });
+    } catch (err) { toast('Ese archivo no es una copia de seguridad de Pulso'); }
+    e.target.value = '';
+  });
+}
+
+/* ---------- profesores (solo super administrador) ---------- */
+function viewTeachers() {
+  const me = Auth.session();
+  const list = Users.all().slice().sort((a, b) => (a.rol === b.rol ? 0 : a.rol === 'superadmin' ? -1 : 1) || a.nombre.localeCompare(b.nombre, 'es'));
+  const tomadas = id => data.classes.filter(c => c.registradoPorId === id).length;
+  setView(topbar('Profesores', plural(list.length, 'cuenta'), backBtn('#/mas'), `<button class="icon-btn solid" data-act="newTeacher" aria-label="Crear cuenta">${ic('plus')}</button>`) + `
+    <p class="muted small" style="margin:0 2px 12px">Cada profesor entra con su propio usuario. Si eliminas una cuenta, esa persona pierde el acceso en todos sus celulares. Las listas que tomó se conservan.</p>
+    <div class="list">${list.map(u => {
+      const ini = u.nombre.split(/\s+/).map(x => x[0]).slice(0, 2).join('').toUpperCase();
+      const n = tomadas(u.id);
+      return `<button class="item" data-act="editTeacher" data-id="${u.id}"><div class="av" aria-hidden="true" style="${u.rol === 'superadmin' ? 'background:var(--hl)' : ''}"><span>${esc(ini)}</span></div>
+        <div class="body"><div class="name">${esc(u.nombre)}${u.id === me.uid ? ' <span class="muted" style="font-weight:500">(tú)</span>' : ''}</div><div class="meta">Usuario: ${esc(u.usuario)}${n ? `. ${plural(n, 'lista tomada', 'listas tomadas')}` : ''}</div></div>
+        <div class="end"><span class="badge b-${u.rol}">${ROLES_CORTO[u.rol]}</span></div></button>`;
+    }).join('')}</div>
+    <button class="btn hl block" style="margin-top:14px" data-act="newTeacher">${ic('plus')}Crear cuenta de profesor</button>`);
+}
+function teacherSheet(id) {
+  const u = id ? Users.get(id) : null; const me = Auth.session();
+  const self = u && u.id === me.uid;
+  openSheet(`
+    <h2>${u ? 'Editar cuenta' : 'Nueva cuenta'}</h2>
+    <form id="tform" autocomplete="off" novalidate>
+      <label class="field"><span>Nombre</span><input class="input" name="nombre" value="${esc(u ? u.nombre : '')}" autocapitalize="words" placeholder="Ej. Leidy Rincón" required></label>
+      ${u ? `<p class="hint">Usuario: <b>${esc(u.usuario)}</b>. No se puede cambiar.</p>` : `
+      <label class="field"><span>Usuario para entrar</span><input class="input" name="usuario" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="leidy" required></label>
+      <p class="hint">Minúsculas, sin espacios ni tildes. Es lo que escribirá al entrar.</p>`}
+      <label class="field"><span>Rol</span><select class="input" name="rol" ${self && Users.supers() === 1 ? 'disabled' : ''}>
+        <option value="profesor" ${u && u.rol === 'profesor' || !u ? 'selected' : ''}>Profesor: toma lista, crea y edita</option>
+        <option value="superadmin" ${u && u.rol === 'superadmin' ? 'selected' : ''}>Super administrador: además gestiona cuentas y borra</option>
+      </select></label>
+      ${u ? '' : `<label class="field"><span>Contraseña temporal</span><span class="gen"><input class="input" name="clave" value="${tempPassword()}" autocapitalize="none" spellcheck="false"><button type="button" class="btn ghost" data-act="regen" aria-label="Generar otra">${ic('refresh')}</button></span></label>
+      <p class="hint">Se la envías y la cambia desde Más al entrar.</p>`}
+      <p class="err" id="terr" role="alert"></p>
+      <div class="actions" style="margin-top:8px"><button type="button" class="btn ghost" data-act="closeSheet">Cancelar</button><button class="btn primary" type="submit">${u ? 'Guardar cambios' : 'Crear cuenta'}</button></div>
+      ${u && !self ? `<button type="button" class="btn ghost block" style="margin-top:12px" data-act="resetTeacher" data-id="${u.id}">${ic('key')}Darle una contraseña nueva</button>
+      <button type="button" class="btn danger block" style="margin-top:10px" data-act="deleteTeacher" data-id="${u.id}">${ic('trash')}Eliminar cuenta</button>` : ''}
+    </form>`, sh => {
+    const f = sh.querySelector('#tform');
+    if (!u) {
+      let touched = false;
+      f.usuario.addEventListener('input', () => { touched = true; });
+      f.nombre.addEventListener('input', () => { if (!touched) f.usuario.value = cleanUser(f.nombre.value.split(/\s+/)[0] || ''); });
+      setTimeout(() => f.nombre.focus(), 250);
+    }
+    f.addEventListener('submit', async e => {
+      e.preventDefault();
+      try {
+        if (u) { await Users.update(u.id, {nombre: f.nombre.value, rol: f.rol.disabled ? u.rol : f.rol.value}); closeSheet(); toast('Cambios guardados'); render(); }
+        else { const nu = await Users.create({nombre: f.nombre.value, usuario: f.usuario.value, rol: f.rol.value, clave: f.clave.value}); credSheet(nu, f.clave.value, 'Cuenta creada'); render(); }
+      } catch (err) { sh.querySelector('#terr').textContent = err.message; }
+    });
+  });
+}
+function credSheet(u, clave, title) {
+  const url = location.href.split('#')[0];
+  const msg = `Hola ${u.nombre.split(' ')[0]}, esta es tu cuenta para tomar lista en Pulso.\nUsuario: ${u.usuario}\nContraseña: ${clave}\nEntra aquí: ${url}\nCambia la contraseña desde Más al entrar.`;
+  openSheet(`
+    <h2>${title}</h2>
+    <p class="muted" style="margin-top:6px">Envíale estos datos a ${esc(u.nombre.split(' ')[0])}. Por seguridad, la contraseña no se vuelve a mostrar.</p>
+    <div class="cred"><div><span>Usuario</span><b>${esc(u.usuario)}</b></div><div><span>Contraseña</span><b>${esc(clave)}</b></div></div>
+    <div class="row-btns" style="margin-top:16px">
+      <a class="btn ghost" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${ic('wa')}WhatsApp</a>
+      <button class="btn ghost" data-act="copyCred" data-msg="${esc(msg)}">${ic('copy')}Copiar</button>
+    </div>
+    <button class="btn primary block" style="margin-top:10px" data-act="closeSheet">Listo</button>`);
+}
+function changePwSheet() {
+  openSheet(`
+    <h2>Cambiar mi contraseña</h2>
+    <form id="pform" novalidate>
+      <label class="field"><span>Contraseña actual</span><span class="pw"><input class="input" type="password" name="actual" autocomplete="current-password"><button type="button" class="eye" data-act="togglePw" aria-label="Mostrar contraseña">${ic('eye')}</button></span></label>
+      <label class="field"><span>Contraseña nueva</span><span class="pw"><input class="input" type="password" name="nueva" autocomplete="new-password"><button type="button" class="eye" data-act="togglePw" aria-label="Mostrar contraseña">${ic('eye')}</button></span></label>
+      <p class="hint">Al menos ${AUTH_CFG.minClave} caracteres. Mejor si es una frase fácil de recordar.</p>
+      <p class="err" id="perr" role="alert"></p>
+      <div class="actions" style="margin-top:8px"><button type="button" class="btn ghost" data-act="closeSheet">Cancelar</button><button class="btn primary" type="submit">Cambiar contraseña</button></div>
+    </form>`, sh => {
+    const f = sh.querySelector('#pform'); setTimeout(() => f.actual.focus(), 250);
+    f.addEventListener('submit', async e => {
+      e.preventDefault();
+      try {
+        if (f.nueva.value === f.actual.value) throw new Error('La nueva contraseña debe ser distinta de la actual.');
+        await Auth.changePassword(f.actual.value, f.nueva.value); closeSheet(); toast('Contraseña cambiada');
+      } catch (err) { sh.querySelector('#perr').textContent = err.message; }
+    });
+  });
+}
+
+/* =========================================================
+   ESTADÍSTICAS (panel)
+   ========================================================= */
+const PERIODOS = [['8', 'Últimas 8 clases'], ['3m', 'Últimos 3 meses'], ['anio', 'Este año'], ['todo', 'Todo']];
+function periodClasses(classes) {
+  if (ui.periodo === '8') return classes.slice(-8);
+  if (ui.periodo === 'todo') return classes;
+  let from;
+  if (ui.periodo === '3m') { const d = new Date(); d.setMonth(d.getMonth() - 3); from = isoOf(d); }
+  else from = `${new Date().getFullYear()}-01-01`;
+  return classes.filter(c => c.fecha >= from);
+}
+const dec = (v, n = 1) => v.toFixed(n).replace('.', ',');
+function median(a) { if (!a.length) return 0; const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
+
+/* barras verticales de una serie; tocar una barra muestra su detalle */
+function vbarChart(id, items, o = {}) {
+  const n = items.length; if (!n) return '';
+  const W = 320, H = o.h || 140, top = o.values ? 16 : 6, bottom = o.labels ? 18 : 0, ph = H - top - bottom;
+  const max = Math.max(...items.map(i => i.value), o.min || 1);
+  const gap = n > 24 ? 2 : n > 12 ? 3 : 6, bw = (W - gap * (n - 1)) / n;
+  const yOf = v => top + ph - (v / max) * ph;
+  const g = items.map((it, i) => {
+    const x = i * (bw + gap), bh = Math.max(2, (it.value / max) * ph);
+    return `<g data-act="barTip" data-chart="${id}" data-tip="${esc(it.tip)}" style="cursor:pointer">
+      <rect x="${(x - gap / 2).toFixed(1)}" y="0" width="${(bw + gap).toFixed(1)}" height="${H}" fill="transparent"/>
+      <rect class="bar${it.hl ? ' hl' : ''}" x="${x.toFixed(1)}" y="${(top + ph - bh).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="${Math.min(4, bw / 2).toFixed(1)}"><title>${esc(it.tip)}</title></rect>
+      ${o.values ? `<text class="vl" x="${(x + bw / 2).toFixed(1)}" y="${(top + ph - bh - 4).toFixed(1)}" text-anchor="middle">${esc(it.vlabel ?? it.value)}</text>` : ''}
+      ${o.labels ? `<text class="xl" x="${(x + bw / 2).toFixed(1)}" y="${H - 4}" text-anchor="middle">${esc(it.label)}</text>` : ''}
+    </g>`;
+  }).join('');
+  const avg = o.avg != null ? `<line class="avgl" x1="0" x2="${W}" y1="${yOf(o.avg).toFixed(1)}" y2="${yOf(o.avg).toFixed(1)}"/>` : '';
+  return `<svg class="vchart${o.solid ? ' solid' : ''}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria || '')}">${avg}${g}</svg>
+    <p class="tipcap" id="cap-${id}" aria-live="polite">${esc(o.hint || 'Toca una barra para ver el detalle.')}</p>`;
+}
+function hbarRows(rows, fmtV) {
+  const max = Math.max(...rows.map(r => r.value), 0.0001);
+  return `<div class="bars-h">${rows.map(r => `<div class="r"><span class="lb">${esc(r.label)}${r.sub ? `<small>${esc(r.sub)}</small>` : ''}</span><span class="track"><span style="width:${(r.value / max * 100).toFixed(1)}%"></span></span><span class="v num">${fmtV(r.value)}</span></div>`).join('')}</div>`;
+}
+
+function viewStats() {
+  if (!data.classes.length) {
+    setView(topbar('Estadísticas', '', backBtn('#/inicio')) + `<div class="empty"><h2>Aún no hay clases</h2><p>Toma la primera lista para empezar a ver estadísticas.</p><a class="btn hl" href="#/lista">${ic('check')}Tomar lista</a></div>`);
+    return;
+  }
+  const serv = curServicio(); const st = stats(serv); const {per} = st;
+  const cls = periodClasses(st.classes);
+  const idxOf = new Map(st.classes.map((c, i) => [c.id, i]));
+  const real = data.students.filter(s => !s.placeholder);
+  const servs = servicios();
+  const filters = `
+    <div class="chips" role="group" aria-label="Periodo">${PERIODOS.map(([k, l]) => `<button class="chip" data-act="periodo" data-v="${k}" aria-pressed="${ui.periodo === k}">${l}</button>`).join('')}</div>
+    ${servs.length > 1 ? `<div class="chips" role="group" aria-label="Servicio" style="margin-top:8px">${['Todos', ...servs].map(s => `<button class="chip" data-act="servicio" data-v="${esc(s)}" aria-pressed="${s === serv}">${s === 'Todos' ? 'Todos los servicios' : esc(s) + ' servicio'}</button>`).join('')}</div>` : ''}`;
+
+  if (!cls.length) {
+    setView(topbar('Estadísticas', '', backBtn('#/inicio')) + filters + `<div class="empty"><h2>No hay clases en este periodo</h2><p>Elige un periodo más largo.</p><button class="btn ghost" data-act="periodo" data-v="todo">Ver todo</button></div>`);
+    return;
+  }
+  const counts = cls.map(c => c.asistentes.length);
+  const prom = avg(counts);
+  const vinieron = new Set(cls.flatMap(c => c.asistentes));
+  const realIds = new Set(real.map(s => s.id));
+  const distintos = [...vinieron].filter(id => realIds.has(id));
+  const activos = real.filter(s => per.get(s.id)?.estado !== 'inactivo').length || 1;
+  const firstIdx = idxOf.get(cls[0].id);
+  const nuevos = real.filter(s => { const p = per.get(s.id); return p && p.first != null && p.first >= firstIdx; });
+  const edadesVin = distintos.map(id => ageOf(DB.student(id))).filter(a => a);
+  const edadProm = avg(edadesVin);
+
+  // 1. asistentes por clase
+  const byClass = vbarChart('clases', cls.map((c, i) => ({value: c.asistentes.length, hl: i === cls.length - 1, tip: `${fmtLong(c.fecha)}: ${c.asistentes.length} jóvenes${c.tema ? `. ${c.tema}` : ''}`})),
+    {avg: prom, aria: 'Asistentes por clase en el periodo', hint: `La línea punteada es el promedio: ${dec(prom)} por clase. Toca una barra para ver la clase.`});
+
+  // 2. promedio por mes
+  const meses = new Map();
+  cls.forEach(c => { const k = c.fecha.slice(0, 7); if (!meses.has(k)) meses.set(k, []); meses.get(k).push(c.asistentes.length); });
+  const mesItems = [...meses].map(([k, v]) => { const nm = dateOf(k + '-15').toLocaleDateString('es-CO', {month: 'short'}).replace('.', ''); return {label: nm, value: avg(v), vlabel: dec(avg(v)), tip: `${dateOf(k + '-15').toLocaleDateString('es-CO', {month: 'long', year: 'numeric'})}: ${dec(avg(v))} jóvenes por clase en ${plural(v.length, 'clase')}`}; });
+  const byMonth = mesItems.length > 1 ? `<section class="section"><h2>Promedio de asistentes por mes</h2><div class="panel" style="margin-top:10px">${vbarChart('meses', mesItems, {values: true, labels: true, solid: true, h: 150, aria: 'Promedio de asistentes por clase, por mes'})}</div></section>` : '';
+
+  // 3. edades de quienes vinieron
+  const ageCount = {}; edadesVin.forEach(a => ageCount[a] = (ageCount[a] || 0) + 1);
+  const ages = Object.keys(ageCount).map(Number).sort((a, b) => a - b);
+  const ageItems = ages.map(a => ({label: `${a}`, value: ageCount[a], tip: `${a} años: ${plural(ageCount[a], 'joven', 'jóvenes')} vinieron en el periodo`}));
+  const ageBlock = ages.length ? `<section class="section"><h2>Edades de quienes vinieron</h2><div class="panel" style="margin-top:10px">
+      <p class="stat-line">Edad promedio <b class="num">${dec(edadProm)}</b> años. La mitad tiene ${dec(median(edadesVin), 0)} años o menos.</p>
+      <div style="margin-top:12px">${vbarChart('edades', ageItems, {values: true, labels: true, solid: true, h: 150, aria: 'Jóvenes por edad'})}</div>
+      ${edadesVin.length < distintos.length ? `<p class="hint">${plural(distintos.length - edadesVin.length, 'joven', 'jóvenes')} sin edad registrada.</p>` : ''}
+    </div></section>` : '';
+
+  // asistencia % por grupo (curso, edad)
+  const pctGroup = keyFn => {
+    const g = {};
+    real.forEach(s => { const p = per.get(s.id); const k = keyFn(s); if (!p || !p.relevant || k == null || k === '') return; (g[k] = g[k] || []).push(p.pct); });
+    return Object.entries(g).filter(([, v]) => v.length >= 1).map(([k, v]) => ({key: k, value: avg(v), n: v.length}));
+  };
+  const cursos = pctGroup(s => (s.curso || '').trim()).sort((a, b) => a.key.localeCompare(b.key, 'es', {numeric: true}));
+  const conCurso = real.filter(s => (s.curso || '').trim()).length;
+  const cursoBlock = `<section class="section"><h2>Asistencia por curso</h2><div class="panel" style="margin-top:10px">${cursos.length ? hbarRows(cursos.map(c => ({label: c.key, value: c.value, sub: plural(c.n, 'joven', 'jóvenes')})), pctTxt) + `<p class="hint" style="margin-top:6px">Porcentaje promedio desde que cada joven llegó.</p>` : `<p class="small muted">Aún no hay jóvenes con curso registrado. Agrégalo al editar cada joven (por ejemplo 6°, 7°, 8°) o importándolo desde el CSV.</p>`}</div></section>`;
+  const edadPct = pctGroup(s => ageOf(s)).sort((a, b) => a.key - b.key);
+  const edadPctBlock = edadPct.length >= 2 ? `<section class="section"><h2>Asistencia por edad</h2><div class="panel" style="margin-top:10px">${hbarRows(edadPct.map(c => ({label: `${c.key} años`, value: c.value, sub: plural(c.n, 'joven', 'jóvenes')})), pctTxt)}</div></section>` : '';
+
+  // por servicio (sin filtro de servicio)
+  let servBlock = '';
+  if (servs.length > 1) {
+    const all = periodClasses(stats('Todos').classes);
+    const rows = servs.map(sv => { const cs = all.filter(c => c.servicio === sv); return {label: sv, value: avg(cs.map(c => c.asistentes.length)), sub: plural(cs.length, 'clase')}; }).filter(r => r.value);
+    if (rows.length > 1) servBlock = `<section class="section"><h2>Promedio por servicio</h2><div class="panel" style="margin-top:10px">${hbarRows(rows, v => dec(v))}<p class="hint" style="margin-top:6px">Jóvenes por clase en el periodo.</p></div></section>`;
+  }
+
+  // ponentes
+  const pon = {};
+  cls.forEach(c => { const k = (c.ponente || '').trim(); if (k) (pon[k] = pon[k] || []).push(c.asistentes.length); });
+  const ponRows = Object.entries(pon).filter(([, v]) => v.length >= 2).map(([k, v]) => ({label: k, value: avg(v), sub: plural(v.length, 'clase')})).sort((a, b) => b.value - a.value).slice(0, 6);
+  const ponBlock = ponRows.length >= 2 ? `<section class="section"><h2>Promedio según quién dio la clase</h2><div class="panel" style="margin-top:10px">${hbarRows(ponRows, v => dec(v))}</div></section>` : '';
+
+  // constantes en el periodo
+  const cnt = new Map(); cls.forEach(c => c.asistentes.forEach(id => cnt.set(id, (cnt.get(id) || 0) + 1)));
+  const top = [...cnt].filter(([id]) => realIds.has(id)).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const topBlock = top.length ? `<section class="section"><h2>Los que más vinieron</h2><div class="list" style="margin-top:10px">${top.map(([id, n]) => { const s = DB.student(id); return `<a class="item" href="#/joven/${id}">${avatar(s)}<div class="body"><div class="name">${esc(fullName(s))}</div><div class="meta">${n} de ${cls.length} clases del periodo</div></div><span class="pct num">${pctTxt(n / cls.length)}</span></a>`; }).join('')}</div></section>` : '';
+
+  // calidad de datos
+  const total = real.length || 1;
+  const sinCel = real.filter(sinContacto).length;
+  const q = [
+    ['Con celular del acudiente', real.length - sinCel, 'sincontacto'],
+    ['Con fecha de nacimiento', real.filter(s => s.fechaNacimiento).length, null],
+    ['Con curso', conCurso, null],
+  ];
+  const ph = data.students.filter(s => s.placeholder).length;
+  const quality = `<section class="section"><h2>Datos completos</h2><div class="panel" style="margin-top:10px">
+    ${q.map(([l, v, f]) => `<div style="padding:8px 0"><div style="display:flex;justify-content:space-between;gap:10px;font-size:14.5px"><span>${l}</span><span class="num"><b>${v}</b> de ${real.length}</span></div><div class="meter" style="margin-top:8px;height:8px"><span style="width:${v / total * 100}%"></span></div>${f && v < real.length ? `<a class="link" style="display:inline-block;margin-top:8px" href="#/jovenes" data-act="goFiltro" data-v="${f}">Ver los ${real.length - v} que faltan</a>` : ''}</div>`).join('')}
+    ${ph ? `<div class="notice" style="margin-top:10px">${plural(ph, 'registro', 'registros')} "Por identificar" de la importación. <a class="link" href="#/jovenes" data-act="goFiltro" data-v="identificar">Vincularlos</a></div>` : ''}
+  </div></section>`;
+
+  setView(topbar('Estadísticas', `${plural(cls.length, 'clase')}, ${fmtShort(cls[0].fecha)} a ${fmtShort(cls[cls.length - 1].fecha)}`, backBtn('#/inicio'), `<button class="icon-btn" data-act="exportXLSX" aria-label="Descargar Excel">${ic('download')}</button>`) + filters + `
+    <div class="kpis">
+      <div class="kpi dark"><div class="k num">${dec(prom)}</div><div class="l">jóvenes por clase en promedio</div></div>
+      <div class="kpi"><div class="k num">${pctTxt(Math.min(1, prom / activos))}</div><div class="l">del grupo activo (${activos}) viene a cada clase</div></div>
+      <div class="kpi"><div class="k num">${distintos.length}</div><div class="l">jóvenes distintos vinieron al menos una vez</div></div>
+      <div class="kpi"><div class="k num">${nuevos.length}</div><div class="l">${nuevos.length === 1 ? 'llegó por primera vez' : 'llegaron por primera vez'}</div></div>
+      <div class="kpi"><div class="k num">${edadesVin.length ? dec(edadProm) : '—'}</div><div class="l">años, edad promedio de quienes vinieron</div></div>
+      <div class="kpi"><div class="k num">${Math.max(...counts)}</div><div class="l">asistencia más alta, ${fmtShort(cls[counts.indexOf(Math.max(...counts))].fecha)}</div></div>
+    </div>
+    <section class="section"><h2>Asistentes por clase</h2><div class="panel" style="margin-top:10px">${byClass}</div></section>
+    ${byMonth}${ageBlock}${cursoBlock}${edadPctBlock}${servBlock}${ponBlock}${topBlock}${quality}
+    <button class="btn primary block" style="margin-top:22px" data-act="exportXLSX">${ic('download')}Descargar Excel de jóvenes</button>`);
+}
+
+/* =========================================================
+   EXCEL (.xlsx) sin librerías: XML de hoja de cálculo + zip
+   ========================================================= */
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zipStore(files) { // [{name, data: Uint8Array}] sin compresión
+  const enc = new TextEncoder(); const parts = [], central = []; let off = 0;
+  const d = new Date(); const dt = ((d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1)) & 0xFFFF, dd = (((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()) & 0xFFFF;
+  for (const f of files) {
+    const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+    h.setUint16(10, dt, true); h.setUint16(12, dd, true); h.setUint32(14, crc, true); h.setUint32(18, size, true); h.setUint32(22, size, true);
+    h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
+    parts.push(new Uint8Array(h.buffer), name, f.data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true);
+    c.setUint16(12, dt, true); c.setUint16(14, dd, true); c.setUint32(16, crc, true); c.setUint32(20, size, true); c.setUint32(24, size, true);
+    c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+    central.push(new Uint8Array(c.buffer), name);
+    off += 30 + name.length + size;
+  }
+  const cdSize = central.reduce((a, b) => a + b.length, 0);
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cdSize, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...central, new Uint8Array(e.buffer)], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+const xesc = v => String(v ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const colName = i => { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+const excelDate = iso => (Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) - Date.UTC(1899, 11, 30)) / 864e5;
+// estilos: 0 normal, 1 encabezado, 2 porcentaje, 3 fecha, 4 alerta (sin celular), 5 título, 6 número centrado
+const XL_STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<numFmts count="1"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/></numFmts>
+<fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><sz val="11"/><color rgb="FFC93B34"/><name val="Calibri"/></font><font><b/><sz val="14"/><color rgb="FF172042"/><name val="Calibri"/></font></fonts>
+<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF172042"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFCE5E3"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="7">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
+<xf numFmtId="9" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="0" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center"/></xf>
+</cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
+// celda: string | number | null | {v, s} | {d: 'AAAA-MM-DD'} | {p: 0.5}
+function xCell(ref, c, rowStyle) {
+  if (c == null || c === '') return '';
+  let v = c, s = rowStyle || 0;
+  if (typeof c === 'object') { if (c.d) { if (!c.d) return ''; return `<c r="${ref}" s="3"><v>${excelDate(c.d)}</v></c>`; } if (c.p != null) return `<c r="${ref}" s="2"><v>${c.p}</v></c>`; v = c.v; s = c.s ?? s; if (v == null || v === '') return s ? `<c r="${ref}" s="${s}"/>` : ''; }
+  if (typeof v === 'number' && isFinite(v)) return `<c r="${ref}"${s ? ` s="${s}"` : ''}><v>${v}</v></c>`;
+  return `<c r="${ref}" t="inlineStr"${s ? ` s="${s}"` : ''}><is><t xml:space="preserve">${xesc(v)}</t></is></c>`;
+}
+function xSheet({rows, widths = [], header = true, freezeCol = 0, filter = true}) {
+  const nCols = Math.max(...rows.map(r => r.length), 1);
+  const body = rows.map((r, ri) => `<row r="${ri + 1}"${header && ri === 0 ? ' ht="30" customHeight="1"' : ''}>${r.map((c, ci) => xCell(colName(ci) + (ri + 1), c, header && ri === 0 ? 1 : 0)).join('')}</row>`).join('');
+  const fr = header ? 1 : 0;
+  const pane = (fr || freezeCol) ? `<pane${freezeCol ? ` xSplit="${freezeCol}"` : ''}${fr ? ` ySplit="${fr}"` : ''} topLeftCell="${colName(freezeCol)}${fr + 1}" activePane="${freezeCol && fr ? 'bottomRight' : fr ? 'bottomLeft' : 'topRight'}" state="frozen"/>` : '';
+  const cols = widths.length ? `<cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>` : '';
+  const af = header && filter && rows.length > 1 ? `<autoFilter ref="A1:${colName(nCols - 1)}${rows.length}"/>` : '';
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0">${pane}</sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>${cols}<sheetData>${body}</sheetData>${af}</worksheet>`;
+}
+function buildXLSX(sheets) { // [{name, ...xSheet opts}]
+  const enc = new TextEncoder(); const f = (name, s) => ({name, data: enc.encode(s)});
+  const safe = n => n.replace(/[\\\/\?\*\[\]:]/g, '').slice(0, 31);
+  return zipStore([
+    f('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`),
+    f('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`),
+    f('xl/workbook.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((s, i) => `<sheet name="${xesc(safe(s.name))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets>${sheets.some(s => s.header !== false && s.filter !== false && s.rows.length > 1) ? `<definedNames>${sheets.map((s, i) => s.header !== false && s.filter !== false && s.rows.length > 1 ? `<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${xesc(safe(s.name))}'!$A$1:$${colName(Math.max(...s.rows.map(r => r.length)) - 1)}$${s.rows.length}</definedName>` : '').join('')}</definedNames>` : ''}</workbook>`),
+    f('xl/_rels/workbook.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`),
+    f('xl/styles.xml', XL_STYLES),
+    ...sheets.map((s, i) => f(`xl/worksheets/sheet${i + 1}.xml`, xSheet(s))),
+  ]);
+}
+function studentsWorkbook() {
+  const st = stats('Todos'); const {per, classes} = st;
+  const real = data.students.filter(s => !s.placeholder).sort((a, b) => (a.apellidos || '').localeCompare(b.apellidos || '', 'es') || fullName(a).localeCompare(fullName(b), 'es'));
+  const ph = data.students.filter(s => s.placeholder);
+  const all = [...real, ...ph];
+  const me = Auth.session();
+  const jov = [['Nombres', 'Apellidos', 'Edad', 'Fecha de nacimiento', 'Curso', 'Acudiente', 'Celular del acudiente', 'Fecha de ingreso', 'Estado', '% asistencia', 'Clases asistidas', 'Clases desde su ingreso', 'Ausencias seguidas', 'Racha actual', 'Mejor racha', 'Primera asistencia', 'Última asistencia', 'Notas', 'ID'],
+    ...all.map(s => { const p = per.get(s.id); return [
+      s.nombres || '', s.apellidos || '', ageOf(s) ?? null, s.fechaNacimiento ? {d: s.fechaNacimiento} : null, s.curso || '', s.acudiente || '',
+      sinContacto(s) && !s.placeholder ? {v: 'Sin registrar', s: 4} : (s.telefono || ''),
+      s.fechaIngreso ? {d: s.fechaIngreso} : null, s.placeholder ? 'Por identificar' : ESTADOS[p.estado].label,
+      p.relevant ? {p: Math.round(p.pct * 1000) / 1000} : null, p.asistidas, p.relevant, p.seguidas, p.actual, p.best,
+      p.firstFecha ? {d: p.firstFecha} : null, p.lastFecha ? {d: p.lastFecha} : null, s.notas || '', s.id]; })];
+  const head = ['Joven', ...classes.map(c => fmt(c.fecha, {day: '2-digit', month: '2-digit', year: '2-digit'})), 'Total'];
+  const asis = [head, ...all.map(s => { const p = per.get(s.id); return [fullName(s), ...classes.map((c, i) => p.set.has(i) ? {v: 1, s: 6} : null), p.asistidas]; })];
+  const firstBy = new Map(); classes.forEach((c, i) => c.asistentes.forEach(id => { if (!firstBy.has(id)) firstBy.set(id, i); }));
+  const clas = [['Fecha', 'Servicio', 'Tema', 'Quién la dio', 'Lista tomada por', 'Asistentes', 'Primera vez', 'Notas'],
+    ...classes.map((c, i) => [{d: c.fecha}, c.servicio || '', c.tema || '', c.ponente || '', c.registradoPor || '', c.asistentes.length, c.asistentes.filter(id => firstBy.get(id) === i && i > 0).length, c.notas || ''])];
+  const cnt = Object.fromEntries(ORDER.map(e => [e, real.filter(s => per.get(s.id)?.estado === e).length]));
+  const last8 = classes.slice(-8).map(c => c.asistentes.length);
+  const res = [
+    [{v: data.settings.grupo, s: 5}],
+    [`Descargado el ${fmt(todayISO(), {day: 'numeric', month: 'long', year: 'numeric'})} por ${me ? me.nombre : ''}`],
+    [],
+    [{v: 'Indicador', s: 1}, {v: 'Valor', s: 1}],
+    ['Jóvenes registrados', real.length],
+    ...ORDER.map(e => [`  ${ESTADOS[e].label}`, cnt[e]]),
+    ['Sin celular del acudiente', real.filter(sinContacto).length],
+    ['Clases registradas', classes.length],
+    ['Promedio de asistentes (últimas 8 clases)', Math.round(avg(last8) * 10) / 10],
+    ['Edad promedio del grupo', Math.round(avg(real.map(ageOf).filter(Boolean)) * 10) / 10],
+    ['Asistencia promedio desde el ingreso', {p: Math.round(avg(real.map(s => per.get(s.id)).filter(p => p.relevant).map(p => p.pct)) * 1000) / 1000}],
+  ];
+  return buildXLSX([
+    {name: 'Jóvenes', rows: jov, widths: [18, 22, 7, 13, 9, 22, 18, 13, 12, 11, 10, 12, 12, 10, 10, 13, 13, 30, 24]},
+    {name: 'Asistencia por clase', rows: asis, widths: [28, ...classes.map(() => 9), 8], freezeCol: 1},
+    {name: 'Clases', rows: clas, widths: [12, 11, 40, 22, 20, 11, 11, 30]},
+    {name: 'Resumen', rows: res, widths: [42, 14], header: false},
+  ]);
+}
+
+/* =========================================================
+   USO DE SERVICIOS (solo super administrador)
+   Límites del plan gratuito revisados en noviembre de 2026:
+   supabase.com/docs/guides/platform/billing-on-supabase
+   docs.github.com/pages/getting-started-with-github-pages/github-pages-limits
+   ========================================================= */
+const MB = 1024 * 1024, GB = 1024 * MB;
+const LIMITES = {
+  revisado: 'noviembre de 2026',
+  supabase: {db: 500 * MB, egreso: 5 * GB, mau: 50000, funciones: 500000, storage: 1 * GB, pausaDias: 7},
+  github: {sitio: 1 * GB, banda: 100 * GB},
+};
+function fmtBytes(b) {
+  b = Number(b) || 0;
+  if (b < 1024) return `${b} B`;
+  if (b < MB) return `${dec(b / 1024, 0)} KB`;
+  if (b < GB) return `${dec(b / MB, b < 10 * MB ? 1 : 0)} MB`;
+  return `${dec(b / GB, 2).replace(/,00$/, '')} GB`;
+}
+const fmtNum = n => Number(n || 0).toLocaleString('es-CO');
+const usoLevel = r => r >= .9 ? 'alert' : r >= .7 ? 'warn' : 'ok';
+const USO_TXT = {ok: 'Bien', warn: 'Atención', alert: 'Cerca del límite'};
+function usoRow({label, used, limit, fmtV = fmtBytes, note = '', est = false}) {
+  const r = limit ? used / limit : 0, lvl = usoLevel(r);
+  const pctS = r === 0 ? '0 %' : r < .01 ? 'menos de 1 %' : pctTxt(r);
+  return `<div class="use">
+    <div class="use-top"><span>${label}</span><span class="num"><b>${est ? '≈ ' : ''}${fmtV(used)}</b> de ${fmtV(limit)}</span></div>
+    <div class="meter ${lvl}"><span style="width:${Math.min(100, used > 0 ? Math.max(r * 100, 1.2) : 0).toFixed(1)}%"></span></div>
+    <div class="use-foot"><span class="lvl ${lvl}">${USO_TXT[lvl]}</span><span>${pctS} usado${note ? `. ${note}` : ''}</span></div>
+  </div>`;
+}
+function ghRepo() {
+  if (CFG.githubRepo) return CFG.githubRepo;
+  const h = location.hostname;
+  if (!h.endsWith('.github.io')) return '';
+  const owner = h.split('.')[0];
+  const seg = location.pathname.split('/').filter(Boolean)[0];
+  return `${owner}/${seg && !seg.includes('.') ? seg : h}`;
+}
+const pagesHost = repo => { const [o, r] = repo.split('/'); return r && r.toLowerCase() === `${o.toLowerCase()}.github.io` ? r : `${o}.github.io/${r}`; };
+const projectRef = () => { try { return new URL(CFG.supabaseUrl).hostname.split('.')[0]; } catch (e) { return ''; } };
+const usoState = {sb: null, sbErr: null, gh: null, ghErr: null, loading: false, at: 0};
+
+// contadores locales de uso, se reportan a Supabase en lotes
+const UKEY_USO = 'pulso.uso';
+const Uso = {
+  pend: (() => { try { return JSON.parse(localStorage.getItem(UKEY_USO) || 'null') || {b: 0, q: 0, a: 0}; } catch (e) { return {b: 0, q: 0, a: 0}; } })(),
+  off: false, sending: false,
+  add(b = 0, q = 0, a = 0) { if (!CLOUD) return; Uso.pend.b += b; Uso.pend.q += q; Uso.pend.a += a; try { localStorage.setItem(UKEY_USO, JSON.stringify(Uso.pend)); } catch (e) {} },
+  async report() {
+    if (!CLOUD || !sb || Uso.off || Uso.sending || !Auth.session()) return;
+    const p = {...Uso.pend}; if (!p.b && !p.q && !p.a) return;
+    Uso.sending = true;
+    try {
+      const {error} = await sb.rpc('registrar_uso', {p_bytes: Math.round(p.b), p_consultas: p.q, p_aperturas: p.a});
+      if (error) { if (error.code === 'PGRST202' || /registrar_uso/.test(error.message || '')) Uso.off = true; return; }
+      Uso.pend.b -= p.b; Uso.pend.q -= p.q; Uso.pend.a -= p.a;
+      try { localStorage.setItem(UKEY_USO, JSON.stringify(Uso.pend)); } catch (e) {}
+    } catch (e) {} finally { Uso.sending = false; }
+  },
+};
+
+function usoEjemplo() {
+  const hoy = new Date(); const diario = [];
+  for (let i = 19; i >= 0; i--) { const d = new Date(hoy); d.setDate(hoy.getDate() - i); const dom = d.getDay() === 0; diario.push({dia: isoOf(d), egreso: dom ? 2.4 * MB : (i % 3 ? 0.3 * MB : 0), consultas: dom ? 180 : (i % 3 ? 12 : 0)}); }
+  const egreso = diario.filter(x => x.dia.slice(0, 7) === todayISO().slice(0, 7)).reduce((a, x) => a + x.egreso, 0);
+  const n = data.students.length, c = data.classes.length, a = data.classes.reduce((x, k) => x + k.asistentes.length, 0);
+  return {ejemplo: true, db_bytes: 11.6 * MB, mau: 6, usuarios: 7, funciones_mes: 14, storage_bytes: 0, egreso_mes: egreso, consultas_mes: 1250, aperturas_mes: 64, diario,
+    tablas: [{tabla: 'jovenes', filas: n || 142, bytes: 96 * 1024}, {tabla: 'clases', filas: c || 30, bytes: 48 * 1024}, {tabla: 'asistencias', filas: a || 669, bytes: 112 * 1024}, {tabla: 'perfiles', filas: 7, bytes: 32 * 1024}],
+    ultima_actividad: new Date(Date.now() - 2 * 864e5).toISOString()};
+}
+async function loadUso() {
+  usoState.loading = true;
+  const jobs = [];
+  if (CLOUD && sb) {
+    jobs.push((async () => {
+      await Uso.report();
+      const {data: d, error} = await sb.rpc('uso_proyecto');
+      if (error) { usoState.sbErr = (error.code === 'PGRST202' || /uso_proyecto/.test(error.message || '')) ? 'falta' : isNetwork(error) ? 'offline' : (error.message || 'error'); }
+      else { usoState.sb = d; usoState.sbErr = null; }
+    })().catch(e => { usoState.sbErr = isNetwork(e) ? 'offline' : String(e.message || e); }));
+  } else { usoState.sb = usoEjemplo(); usoState.sbErr = null; }
+  const repo = ghRepo();
+  if (repo) {
+    const cached = ls.get('pulso.gh');
+    if (cached && cached.repo === repo && Date.now() - cached.at < 3600e3) usoState.gh = cached;
+    else jobs.push((async () => {
+      const [r1, r2] = await Promise.all([fetch(`https://api.github.com/repos/${repo}`), fetch(`https://api.github.com/repos/${repo}/commits?per_page=1`)]);
+      if (!r1.ok) throw new Error(r1.status === 404 ? `No encontré el repositorio ${repo}.` : r1.status === 403 ? 'GitHub limitó las consultas; intenta en una hora.' : `GitHub respondió ${r1.status}.`);
+      const j = await r1.json(); const cm = r2.ok ? (await r2.json())[0] : null;
+      usoState.gh = {repo, at: Date.now(), sizeKB: j.size, url: j.html_url, pages: j.has_pages, ultimo: cm ? {fecha: cm.commit.committer.date, msg: cm.commit.message.split('\n')[0]} : null};
+      usoState.ghErr = null; ls.set('pulso.gh', usoState.gh);
+    })().catch(e => { usoState.ghErr = isNetwork(e) ? 'Sin conexión con GitHub.' : String(e.message || e); }));
+  }
+  await Promise.all(jobs);
+  usoState.loading = false; usoState.at = Date.now();
+}
+function viewUso(force) {
+  if (!Auth.isSuper()) { location.replace('#/mas'); return; }
+  const first = !usoState.at || force === true;
+  if (first && !usoState.loading) { loadUso().then(() => { if (location.hash === '#/uso') viewUso(false); }); }
+  const d = usoState.sb, L = LIMITES.supabase, G = LIMITES.github;
+  const head = topbar('Uso de servicios', usoState.at ? `Plan gratuito. Revisado a las ${new Date(usoState.at).toLocaleTimeString('es-CO', {hour: 'numeric', minute: '2-digit'})}` : 'Plan gratuito', backBtn('#/mas'),
+    `<button class="icon-btn" data-act="usoRefresh" aria-label="Actualizar">${ic('refresh')}</button>`);
+  if (usoState.loading && !d && !usoState.gh) { setView(head + `<div class="panel" style="margin-top:6px"><p class="muted">Consultando el uso…</p></div>`); return; }
+
+  // ---- Supabase
+  let sbBody = '';
+  if (usoState.sbErr === 'falta') sbBody = `<div class="notice alert">Falta instalar la medición. En Supabase abre <b>SQL Editor</b>, pega el archivo <code>supabase/uso.sql</code> y pulsa <b>Run</b>.</div>`;
+  else if (usoState.sbErr === 'offline' && !d) sbBody = `<div class="notice">Sin conexión. Vuelve a intentarlo cuando tengas internet.</div>`;
+  else if (usoState.sbErr && !d) sbBody = `<div class="notice alert">No se pudo leer el uso: ${esc(usoState.sbErr)}</div>`;
+  if (d) {
+    const hoy = new Date(), dia = hoy.getDate(), diasMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
+    const proy = d.egreso_mes / Math.max(1, dia) * diasMes;
+    const ult = d.ultima_actividad ? new Date(d.ultima_actividad) : null;
+    const dias = ult ? Math.floor((Date.now() - ult.getTime()) / 864e5) : null;
+    const pausa = dias == null ? '' : dias >= L.pausaDias - 2
+      ? `<div class="notice alert" style="margin-top:12px"><b>Última actividad hace ${plural(dias, 'día')}.</b> Supabase pausa los proyectos gratuitos tras una semana sin actividad. Abre la app o toma lista pronto para evitarlo.</div>`
+      : `<p class="hint" style="margin-top:10px">Última actividad: ${dias === 0 ? 'hoy' : dias === 1 ? 'ayer' : `hace ${dias} días`}. Supabase pausa los proyectos gratuitos tras una semana sin actividad.</p>`;
+    // tráfico diario del mes
+    const mesIso = todayISO().slice(0, 7); const byDay = new Map((d.diario || []).map(x => [String(x.dia).slice(0, 10), x]));
+    const items = []; for (let i = 1; i <= dia; i++) { const iso = `${mesIso}-${pad(i)}`; const x = byDay.get(iso); items.push({value: x ? x.egreso / MB : 0, hl: i === dia, tip: `${fmt(iso, {weekday: 'long', day: 'numeric'})}: ${fmtBytes(x ? x.egreso : 0)} descargados, ${fmtNum(x ? x.consultas : 0)} consultas`}); }
+    sbBody += `
+      ${usoRow({label: 'Base de datos', used: d.db_bytes, limit: L.db})}
+      ${usoRow({label: 'Tráfico de salida este mes', used: d.egreso_mes, limit: L.egreso, est: true, note: `Al ritmo actual cerrarías el mes con ≈ ${fmtBytes(proy)}`})}
+      ${usoRow({label: 'Usuarios activos este mes', used: d.mau, limit: L.mau, fmtV: fmtNum, note: `${plural(d.usuarios, 'cuenta')} en total`})}
+      ${usoRow({label: 'Llamadas a funciones este mes', used: d.funciones_mes, limit: L.funciones, fmtV: fmtNum})}
+      ${usoRow({label: 'Archivos guardados', used: d.storage_bytes, limit: L.storage})}
+      ${pausa}
+      <h3 class="use-h">Tráfico por día este mes</h3>
+      ${vbarChart('egreso', items, {h: 110, aria: 'Megabytes descargados por día', hint: `${d.consultas_mes === 1 ? '1 consulta' : `${fmtNum(d.consultas_mes)} consultas`} y ${d.aperturas_mes === 1 ? '1 apertura' : `${fmtNum(d.aperturas_mes)} aperturas`} de la app este mes. Toca una barra para ver el día.`})}
+      <h3 class="use-h">Tamaño por tabla</h3>
+      <table class="use-t"><thead><tr><th>Tabla</th><th class="num">Filas</th><th class="num">Tamaño</th></tr></thead><tbody>
+        ${(d.tablas || []).map(t => `<tr><td>${esc(t.tabla)}</td><td class="num">${fmtNum(t.filas)}</td><td class="num">${fmtBytes(t.bytes)}</td></tr>`).join('')}
+      </tbody></table>
+      <p class="hint" style="margin-top:10px">El tráfico es un estimado que mide la app al descargar datos; no incluye el tiempo real ni los ingresos. El dato exacto está en el panel de Supabase.</p>`;
+  }
+  const ref = projectRef();
+  const sbCard = `<section class="section"><div class="prov"><span class="prov-mark sb" aria-hidden="true">S</span><div><h2>Supabase</h2><p class="small muted">Base de datos, cuentas y función del servidor. Plan Free.</p></div></div>
+    <div class="panel" style="margin-top:10px">
+      ${d && d.ejemplo ? `<div class="notice" style="margin-bottom:12px"><b>Vista de ejemplo.</b> Cuando conectes Supabase verás aquí el uso real.</div>` : ''}
+      ${sbBody}
+      ${CLOUD ? `<a class="btn ghost block" style="margin-top:14px" href="https://supabase.com/dashboard/project/${esc(ref)}" target="_blank" rel="noopener">${ic('link')}Abrir el proyecto en Supabase</a>
+      <a class="link" style="display:inline-block;margin-top:10px" href="https://supabase.com/dashboard/org/_/usage" target="_blank" rel="noopener">Ver el uso exacto de la organización</a>` : ''}
+    </div></section>`;
+
+  // ---- GitHub Pages
+  const repo = ghRepo(); const gh = usoState.gh;
+  let ghBody;
+  if (!repo) ghBody = `<p class="small muted">Cuando publiques la app en GitHub Pages, aquí verás el tamaño del sitio y la fecha de la última actualización. Límites: sitio de hasta 1 GB y ancho de banda de 100 GB al mes.</p>`;
+  else if (usoState.ghErr && !gh) ghBody = `<div class="notice alert">${esc(usoState.ghErr)}</div>`;
+  else if (!gh) ghBody = `<p class="muted">Consultando GitHub…</p>`;
+  else {
+    const ap = d && !d.ejemplo ? d.aperturas_mes : null;
+    ghBody = `
+      ${usoRow({label: 'Tamaño del repositorio', used: gh.sizeKB * 1024, limit: G.sitio})}
+      <div class="use"><div class="use-top"><span>Ancho de banda este mes</span><span class="num"><b>Sin medidor</b> de 100 GB</span></div>
+      <p class="small muted" style="margin-top:4px">GitHub no publica este consumo. ${ap != null ? `La app se abrió ${plural(ap, 'vez', 'veces')} este mes; como queda guardada en cada celular, casi no descarga nada al abrir.` : 'La app queda guardada en cada celular y casi no descarga nada al abrir.'}</p></div>
+      ${gh.ultimo ? `<p class="small" style="margin-top:12px"><b>Última actualización:</b> ${fmt(gh.ultimo.fecha.slice(0, 10), {day: 'numeric', month: 'long', year: 'numeric'})}. <span class="muted">${esc(gh.ultimo.msg)}</span></p>` : ''}
+      <a class="btn ghost block" style="margin-top:14px" href="${esc(gh.url)}" target="_blank" rel="noopener">${ic('link')}Abrir ${esc(gh.repo)}</a>`;
+  }
+  const ghCard = `<section class="section"><div class="prov"><span class="prov-mark gh" aria-hidden="true">G</span><div><h2>GitHub Pages</h2><p class="small muted">Publica la app en ${repo ? esc(pagesHost(repo)) : 'tu dirección web'}. Gratis.</p></div></div>
+    <div class="panel" style="margin-top:10px">${ghBody}</div></section>`;
+
+  // ---- este celular
+  const localBytes = (() => { try { let t = 0; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith('pulso')) t += (localStorage.getItem(k) || '').length * 2; } return t; } catch (e) { return 0; } })();
+  const devCard = `<section class="section"><h2>Este celular</h2><div class="panel" style="margin-top:10px">
+      <div class="use-top"><span>Datos guardados en el celular</span><span class="num"><b>${fmtBytes(localBytes)}</b></span></div>
+      ${CLOUD ? `<div class="use-top" style="margin-top:10px"><span>Cambios por enviar</span><span class="num"><b>${fmtNum(Sync.queue.length)}</b></span></div>` : ''}
+      <p class="hint" style="margin-top:8px">Las fuentes y la librería de Supabase vienen de servicios públicos (Google Fonts y jsDelivr) que no necesitan cuenta.</p>
+    </div></section>`;
+
+  setView(head + sbCard + ghCard + devCard + `<p class="hint" style="margin:18px 2px 0">Límites del plan gratuito revisados en ${LIMITES.revisado}: <a class="link" href="https://supabase.com/docs/guides/platform/billing-on-supabase" target="_blank" rel="noopener">Supabase</a> y <a class="link" href="https://docs.github.com/pages/getting-started-with-github-pages/github-pages-limits" target="_blank" rel="noopener">GitHub Pages</a>.</p>`);
+}
+
+/* ---------- CSV ---------- */
+function parseCSV(text) {
+  text = text.replace(/^﻿/, '');
+  const firstLine = text.split(/\r?\n/)[0] || '';
+  const delim = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; }
+      else f += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === delim) { row.push(f); f = ''; }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += ch;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  const clean = rows.filter(r => r.some(x => x.trim() !== ''));
+  const headers = (clean.shift() || []).map(h => h.trim());
+  return {headers, rows: clean.map(r => Object.fromEntries(headers.map((h, i) => [h, (r[i] ?? '').trim()])))};
+}
+function toCSV(rows) {
+  const e = v => { v = String(v ?? ''); return /[;"\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
+  return '﻿' + rows.map(r => r.map(e).join(';')).join('\r\n');
+}
+let dlNs;
+async function downloadsNs() {
+  if (dlNs !== undefined) return dlNs;
+  dlNs = null;
+  if (window.claude && typeof window.claude.use === 'function') { try { dlNs = await window.claude.use('downloads'); } catch (e) { dlNs = null; } }
+  return dlNs;
+}
+async function download(name, content, type) {
+  const blob = content instanceof Blob ? content : new Blob([content], {type});
+  const ns = await downloadsNs();
+  if (ns) {
+    try { await ns.save({filename: name, data: blob}); toast('Archivo descargado'); }
+    catch (e) { if (!e || e.code !== 'declined') toast('No se pudo descargar el archivo en esta vista.'); }
+    return;
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  toast('Descargando ' + name);
+}
+const MES = {jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12, ene: 1, abr: 4, ago: 8, dic: 12};
+function parseDate(v) {
+  v = String(v || '').trim(); if (!v) return '';
+  let m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if (m) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+  m = v.match(/^([A-Za-zé]{3})[a-zé]*\.?\s+(\d{1,2}),?\s+(\d{4})/);
+  if (m && MES[norm(m[1])]) return `${m[3]}-${pad(MES[norm(m[1])])}-${pad(m[2])}`;
+  m = v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/); if (m) return `${m[3]}-${pad(m[2])}-${pad(m[1])}`;
+  const d = new Date(v); return isNaN(d) ? '' : isoOf(d);
+}
+
+const FIELDS = {
+  s: [
+    ['id', 'ID único', ['uniqueid', 'id', '_id', 'idalumno', 'idjoven']],
+    ['nombres', 'Nombres', ['nombres', 'nombre', 'name', 'primernombre']],
+    ['apellidos', 'Apellidos', ['apellidos', 'apellido', 'lastname']],
+    ['edad', 'Edad', ['edad', 'age']],
+    ['fechaNacimiento', 'Fecha de nacimiento', ['fechadenacimiento', 'nacimiento', 'fechanacimiento', 'cumpleanos']],
+    ['fechaIngreso', 'Fecha de ingreso', ['fechadeingreso', 'ingreso', 'fechaingreso']],
+    ['acudiente', 'Acudiente', ['acudiente', 'padre', 'madre', 'responsable']],
+    ['telefono', 'Celular del acudiente', ['telefono', 'celular', 'telefonoacudiente', 'celularacudiente', 'whatsapp']],
+    ['curso', 'Curso o grado', ['curso', 'grado', 'grade', 'nivel']],
+    ['foto', 'Foto (enlace)', ['foto', 'photo', 'imagen']],
+  ],
+  c: [
+    ['id', 'ID único', ['uniqueid', 'id', '_id']],
+    ['fecha', 'Fecha', ['fecha', 'date', 'fechaclase']],
+    ['tema', 'Tema', ['tema', 'nombre', 'titulo', 'name']],
+    ['servicio', 'Servicio', ['servicio', 'grupo', 'jornada']],
+    ['ponente', 'Quién dio la clase', ['ponente', 'ponentes', 'maestro', 'profesor', 'lider']],
+    ['asistentes', 'Asistentes (IDs)', ['alumnos', 'asistentes', 'estudiantes', 'jovenes']],
+  ],
+};
+const hnorm = h => norm(h).replace(/[^a-z0-9_]/g, '');
+const imp = {s: null, c: null, mode: 'replace'};
+function guessMap(kind, headers) {
+  const map = {};
+  for (const [k, , syn] of FIELDS[kind]) { const h = headers.find(x => syn.includes(hnorm(x))); map[k] = h || ''; }
+  return map;
+}
+function viewImport() {
+  const box = (kind, title, help) => {
+    const st = imp[kind];
+    return `<section class="panel" style="margin-top:12px">
+      <h2>${title}</h2>
+      <p class="small muted" style="margin-top:4px">${help}</p>
+      <label class="drop ${st ? 'ok' : ''}" style="margin-top:12px">${ic(st ? 'check' : 'upload')}<b>${st ? esc(st.name) : 'Elegir archivo CSV'}</b><span class="small muted">${st ? `${plural(st.rows.length, 'fila')}. Toca para cambiarlo.` : 'Exportado desde tu app anterior o desde Excel'}</span><input type="file" accept=".csv,text/csv" class="sr" data-kind="${kind}"></label>
+      ${st ? `${kind === 's' && !st.map.id ? `<div class="notice alert" style="margin-top:12px"><b>Este archivo no tiene columna de ID.</b> Sin ella no se pueden unir los jóvenes con las asistencias de las clases. Vuelve a exportar desde tu app anterior incluyendo el campo de ID único (en Bubble se llama <i>unique id</i>) y los nombres.</div>` : ''}
+      ${kind === 's' && !st.map.nombres ? `<div class="notice" style="margin-top:10px">No encontré una columna de <b>nombres</b>. Los jóvenes quedarán solo con apellidos hasta que los edites.</div>` : ''}
+      <details ${(!st.map.id && kind === 's') ? 'open' : ''}><summary>${ic('chev')}Revisar columnas</summary><div class="map">${FIELDS[kind].map(([k, l]) => `<span>${l}</span><select class="input" data-map="${kind}" data-k="${k}"><option value="">No importar</option>${st.headers.map(h => `<option ${st.map[k] === h ? 'selected' : ''}>${esc(h)}</option>`).join('')}</select>`).join('')}</div></details>` : ''}
+    </section>`;
+  };
+  const plan = buildImport();
+  setView(topbar('Importar datos', '', backBtn('#/mas')) + `
+    <p class="muted small" style="margin:0 2px">Carga los dos archivos de tu app anterior. Revisa el resumen antes de importar.</p>
+    ${box('s', 'Jóvenes', 'Un joven por fila: nombres, apellidos, edad, acudiente.')}
+    ${box('c', 'Clases', 'Una clase por fila, con la lista de IDs de quienes asistieron.')}
+    ${plan ? `<section class="section"><h2>Resumen</h2><div class="panel" style="margin-top:10px">
+      <p class="stat-line">Se importarán <b class="num">${plan.students.filter(s => !s.placeholder).length}</b> jóvenes, <b class="num">${plan.classes.length}</b> clases y <b class="num">${plan.asist}</b> asistencias.</p>
+      ${plan.placeholders ? `<div class="notice ${plan.linked ? '' : 'alert'}" style="margin-top:12px">${plan.linked ? `<b>${plural(plan.placeholders, 'ID', 'IDs')} de asistentes no ${plan.placeholders === 1 ? 'aparece' : 'aparecen'} en el archivo de jóvenes.</b> Se crearán como "Por identificar" y podrás vincularlos después desde su perfil.` : `<b>Ninguna asistencia coincide con los jóvenes del archivo.</b> Se crearán ${plan.placeholders} registros "Por identificar" con sus asistencias. Es mejor volver a exportar los jóvenes con su ID único.`}</div>` : ''}
+      ${data.students.length || data.classes.length ? `
+      <label class="radio"><input type="radio" name="mode" value="replace" ${imp.mode === 'replace' ? 'checked' : ''}><span><b>Reemplazar todo</b><br><span class="small muted">Borra los datos actuales y deja solo lo importado.</span></span></label>
+      <label class="radio"><input type="radio" name="mode" value="merge" ${imp.mode === 'merge' ? 'checked' : ''}><span><b>Agregar a lo que ya hay</b><br><span class="small muted">Actualiza los registros con el mismo ID y agrega los nuevos.</span></span></label>` : ''}
+      <button class="btn primary block" style="margin-top:16px" data-act="doImport">${ic('upload')}Importar datos</button>
+    </div></section>` : ''}`);
+  document.querySelectorAll('input[type=file][data-kind]').forEach(inp => inp.addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file) return;
+    const kind = e.target.dataset.kind; const p = parseCSV(await file.text());
+    if (!p.headers.length) { toast('El archivo está vacío'); return; }
+    imp[kind] = {name: file.name, headers: p.headers, rows: p.rows, map: guessMap(kind, p.headers)};
+    viewImport();
+  }));
+  document.querySelectorAll('select[data-map]').forEach(sel => sel.addEventListener('change', e => { imp[e.target.dataset.map].map[e.target.dataset.k] = e.target.value; viewImport(); }));
+  document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', e => { imp.mode = e.target.value; }));
+}
+function buildImport() {
+  if (!imp.s && !imp.c) return null;
+  const out = {students: [], classes: [], placeholders: 0, asist: 0, linked: false};
+  const ids = new Set(data.students.map(s => s.id));
+  if (imp.s) {
+    const m = imp.s.map, g = (r, k) => m[k] ? (r[m[k]] || '').trim() : '';
+    for (const r of imp.s.rows) {
+      const s = {id: g(r, 'id') || uid(), nombres: g(r, 'nombres'), apellidos: g(r, 'apellidos'), edad: g(r, 'edad'), fechaNacimiento: parseDate(g(r, 'fechaNacimiento')), fechaIngreso: parseDate(g(r, 'fechaIngreso')), acudiente: g(r, 'acudiente'), telefono: g(r, 'telefono'), curso: g(r, 'curso'), foto: g(r, 'foto')};
+      if (s.foto.startsWith('//')) s.foto = 'https:' + s.foto;
+      if (!s.nombres && !s.apellidos) continue;
+      out.students.push(s); ids.add(s.id);
+    }
+  }
+  if (imp.c) {
+    const m = imp.c.map, g = (r, k) => m[k] ? (r[m[k]] || '').trim() : '';
+    const ph = new Map();
+    const known = imp.mode === 'merge' || !imp.s ? ids : new Set(out.students.map(s => s.id));
+    for (const r of imp.c.rows) {
+      const fecha = parseDate(g(r, 'fecha')); if (!fecha) continue;
+      const asistentes = [...new Set(g(r, 'asistentes').split(/[,;\s]+/).map(x => x.trim()).filter(Boolean))];
+      asistentes.forEach(a => { if (known.has(a)) out.linked = true; else if (!ph.has(a)) ph.set(a, {id: a, nombres: 'Por identificar', apellidos: '…' + a.slice(-4), placeholder: true}); });
+      out.asist += asistentes.length;
+      out.classes.push({id: g(r, 'id') || uid(), fecha, tema: g(r, 'tema').replace(/\s+/g, ' '), servicio: g(r, 'servicio'), ponente: g(r, 'ponente'), asistentes});
+    }
+    out.placeholders = ph.size;
+    out.students.push(...ph.values());
+  }
+  return out;
+}
+
+/* ---------- datos de ejemplo ---------- */
+function demoData() {
+  let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const N = ['Valentina', 'Santiago', 'Sofía', 'Samuel', 'Isabella', 'Matías', 'Mariana', 'Emiliano', 'Gabriela', 'Tomás', 'Luciana', 'Juan José', 'Salomé', 'Martín', 'Antonella', 'Jerónimo', 'Sara', 'Nicolás', 'Manuela', 'Daniel', 'Juliana', 'Felipe', 'Laura', 'Andrés', 'Camila', 'David', 'Paula', 'Sebastián', 'Mía', 'Esteban', 'Ana Lucía', 'Miguel', 'Valeria', 'Simón', 'Danna', 'Alejandro', 'Luisa', 'Thiago', 'María José', 'Julián', 'Emily', 'Jacobo'];
+  const A = ['Rojas', 'Gómez', 'Pardo', 'Castro', 'Muñoz', 'Herrera', 'Suárez', 'Rincón', 'Barrera', 'Niño', 'Salamanca', 'Torres', 'Ortiz', 'Vargas', 'Quintero', 'Cárdenas', 'Moreno', 'Peña', 'Díaz', 'León'];
+  const P = ['Sandra', 'Claudia', 'Jaime', 'Luisa', 'Henry', 'Diana', 'Marcela', 'Óscar', 'Patricia', 'Andrés'];
+  const T = ['Adoptados, no huérfanos', 'Mi familia no es perfecta', 'Amistades que suman', 'Cuando nadie me ve', 'Ansiedad: lo que no se dice', 'Decisiones con propósito', 'Tiempo de pantalla', 'Perdonar sin olvidar', 'Valiente no es no tener miedo', 'Lo que sí importa', 'Mi identidad en línea', 'Hablar con Dios sin palabras raras', 'Rompiendo etiquetas', 'El poder de las palabras', 'Servir también es para mí', 'Comparación en redes', 'Mis padres y yo', 'Fe en el colegio', 'Propósito antes que aplausos', 'No todo lo que brilla es oro', 'Volver a empezar', 'Gratitud en días grises', 'Soy parte de la historia', 'Convicciones firmes', 'Ctrl Z a lo que me aleja', 'Ser luz en mi casa'];
+  const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 7) % 7)); if (d > new Date()) d.setDate(d.getDate() - 7);
+  const dates = []; for (let i = 25; i >= 0; i--) { const x = new Date(d); x.setDate(d.getDate() - 7 * i); dates.push(isoOf(x)); }
+  const students = N.map((n, i) => {
+    const join = rnd() < .7 ? 0 : Math.floor(rnd() * 24);
+    const drop = rnd() < .15 ? join + 4 + Math.floor(rnd() * 14) : 99;
+    const b = new Date(2026 - 10 - Math.floor(rnd() * 5), Math.floor(rnd() * 12), 1 + Math.floor(rnd() * 27));
+    return {id: 'demo' + i, nombres: n, apellidos: A[Math.floor(rnd() * A.length)] + ' ' + A[Math.floor(rnd() * A.length)], fechaNacimiento: isoOf(b), acudiente: P[Math.floor(rnd() * P.length)] + ' ' + A[Math.floor(rnd() * A.length)], telefono: rnd() < .18 ? '' : '3' + String(Math.floor(1e8 + rnd() * 9e8)).slice(0, 9), curso: `${Math.min(11, Math.max(4, 2026 - b.getFullYear() - 5))}°`, fechaIngreso: dates[join], _p: .25 + rnd() * .7, _j: join, _d: drop};
+  });
+  const classes = dates.map((f, i) => ({id: 'dc' + i, fecha: f, tema: T[i % T.length], servicio: i % 9 === 4 ? 'Tercero' : 'Segundo', ponente: i % 3 ? 'Yesid y Leidy' : 'Jose y Leo', asistentes: students.filter(s => i >= s._j && i < s._d && rnd() < s._p).map(s => s.id)}));
+  students.forEach(s => { delete s._p; delete s._j; delete s._d; });
+  return {students, classes, settings: {grupo: 'Jóvenes Segundo servicio', servicio: 'Segundo', riesgo: 3, inactivo: 8}};
+}
+
+/* =========================================================
+   Hoja inferior, confirmación y avisos
+   ========================================================= */
+let sheetEl = null, lastFocus = null;
+function openSheet(html, onMount) {
+  closeSheet(); lastFocus = document.activeElement;
+  sheetEl = document.createElement('div'); sheetEl.className = 'scrim';
+  sheetEl.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>${html}</div>`;
+  sheetEl.addEventListener('click', e => { if (e.target === sheetEl) closeSheet(); });
+  document.body.appendChild(sheetEl); document.body.style.overflow = 'hidden';
+  onMount && onMount(sheetEl);
+}
+function closeSheet() { if (sheetEl) { sheetEl.remove(); sheetEl = null; document.body.style.overflow = ''; lastFocus && lastFocus.focus && lastFocus.focus(); if (needRender) { needRender = false; setTimeout(softRender, 0); } } }
+function confirmSheet(title, text, okLabel, onOk, danger = false) {
+  openSheet(`<h2>${title}</h2><p class="muted" style="margin-top:8px">${text}</p><div class="actions"><button class="btn ghost" data-act="closeSheet">Cancelar</button><button class="btn ${danger ? 'danger' : 'primary'}" id="okbtn">${okLabel}</button></div>`,
+    sh => sh.querySelector('#okbtn').addEventListener('click', async () => { closeSheet(); await onOk(); }));
+}
+let toastT;
+function toast(msg) { document.querySelectorAll('.toast').forEach(t => t.remove()); const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg; document.body.appendChild(t); clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2600); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+/* =========================================================
+   Acciones (delegación de eventos)
+   ========================================================= */
+const ACT = {
+  togglePw: el => { const i = el.parentElement.querySelector('input'); const show = i.type === 'password'; i.type = show ? 'text' : 'password'; el.innerHTML = ic(show ? 'eyeOff' : 'eye'); el.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña'); },
+  changePw: () => changePwSheet(),
+  newTeacher: () => teacherSheet(null),
+  editTeacher: el => teacherSheet(el.dataset.id),
+  regen: el => { el.parentElement.querySelector('input').value = tempPassword(); },
+  copyCred: async el => { try { await navigator.clipboard.writeText(el.dataset.msg); toast('Datos copiados'); } catch (e) { toast('No se pudo copiar. Usa WhatsApp o anótalos.'); } },
+  resetTeacher: async el => {
+    const u = Users.get(el.dataset.id);
+    confirmSheet(`¿Darle una contraseña nueva a ${esc(u.nombre)}?`, 'La contraseña anterior dejará de funcionar. Tendrás que enviarle la nueva.', 'Generar contraseña', async () => {
+      const c = tempPassword(); await Users.resetPassword(u.id, c); credSheet(u, c, 'Contraseña nueva');
+    });
+  },
+  deleteTeacher: el => {
+    const u = Users.get(el.dataset.id);
+    confirmSheet(`¿Eliminar la cuenta de ${esc(u.nombre)}?`, `Perderá el acceso de inmediato en todos sus celulares. Las listas que tomó se conservan con su nombre. No se puede deshacer.`, 'Eliminar cuenta', async () => {
+      try { await Users.remove(u.id); toast('Cuenta eliminada'); render(); } catch (err) { toast(err.message); }
+    }, true);
+  },
+  reauth: () => CloudAuth.reauth(),
+  syncNow: async () => { if (!CLOUD) return; toast('Sincronizando'); await Sync.flush(); await Sync.pull(); Sync.ui(); toast(Sync.status()); },
+  logout: () => confirmSheet('¿Cerrar sesión en este celular?', CLOUD && Sync.queue.length ? `Hay ${plural(Sync.queue.length, 'cambio')} sin enviar porque no hay conexión. Si cierras sesión ahora se perderán.` : 'Los otros celulares siguen con su sesión abierta. Para volver a entrar necesitarás la contraseña.', 'Cerrar sesión', async () => { await Auth.signOut(); location.hash = '#/inicio'; render(); }),
+  newStudent: el => studentSheet(null, {classId: el.dataset.class}),
+  editStudent: el => studentSheet(el.dataset.id, {focus: el.dataset.focus}),
+  editClass: el => classSheet(el.dataset.id),
+  closeSheet: () => closeSheet(),
+  servicio: el => { ui.servicio = el.dataset.v; render(); },
+  filtro: el => { ui.filtro = el.dataset.v; drawStudents(stats(curServicio())); },
+  goFiltro: el => { ui.filtro = el.dataset.v; },
+  rsort: el => { ui.rsort = el.dataset.v; document.querySelectorAll('[data-act=rsort]').forEach(b => b.setAttribute('aria-pressed', b === el)); drawRoster(DB.cls(location.hash.split('/')[2])); },
+  showInactive: () => { ui.showInactive = !ui.showInactive; drawRoster(DB.cls(location.hash.split('/')[2])); },
+  toggle: async el => {
+    const cid = location.hash.split('/')[2]; const on = el.getAttribute('aria-pressed') !== 'true';
+    el.setAttribute('aria-pressed', on);
+    if (navigator.vibrate) try { navigator.vibrate(on ? 12 : 6); } catch (e) {}
+    await DB.setAttendance(cid, el.dataset.id, on);
+    $('#pcount').textContent = DB.cls(cid).asistentes.length;
+  },
+  deleteStudent: el => { if (!Auth.isSuper()) return;  const s = DB.student(el.dataset.id); confirmSheet(`¿Eliminar a ${esc(fullName(s))}?`, 'Se borrarán sus datos y sus asistencias de todas las clases. No se puede deshacer.', 'Eliminar joven', async () => { await DB.deleteStudent(s.id); toast('Joven eliminado'); location.hash = '#/jovenes'; }, true); },
+  deleteClass: el => { if (!Auth.isSuper()) return;  const c = DB.cls(el.dataset.id); confirmSheet('¿Eliminar esta clase?', `Se borrará la clase del ${fmtLong(c.fecha)} con sus ${c.asistentes.length} asistencias. No se puede deshacer.`, 'Eliminar clase', async () => { await DB.deleteClass(c.id); toast('Clase eliminada'); location.hash = '#/clases'; }, true); },
+  merge: async el => { const to = $('#mergeTo').value; if (!to) { toast('Elige el joven correcto'); return; } await DB.mergeStudent(el.dataset.id, to); toast('Asistencias vinculadas'); location.hash = '#/joven/' + to; },
+  doImport: async () => { if (!Auth.isSuper()) return;
+    const plan = buildImport(); if (!plan) return;
+    const payload = {students: plan.students, classes: plan.classes};
+    if (imp.mode === 'merge' && (data.students.length || data.classes.length)) await DB.mergeAll(payload);
+    else await DB.replaceAll(Object.assign({settings: data.settings}, payload));
+    const sv = servicios(); if (!data.settings.servicio && sv.length) { const top = sv.map(s => [s, data.classes.filter(c => c.servicio === s).length]).sort((a, b) => b[1] - a[1])[0][0]; await DB.saveSettings({servicio: top}); }
+    imp.s = imp.c = null; ui.servicio = null;
+    toast(`Importados ${plan.students.length} registros y ${plan.classes.length} clases`); location.hash = '#/inicio';
+  },
+  exportXLSX: async el => {
+    if (el) el.setAttribute('aria-busy', 'true');
+    try { await download(`pulso-jovenes-${todayISO()}.xlsx`, studentsWorkbook()); }
+    catch (e) { console.error(e); toast('No se pudo generar el Excel.'); }
+    finally { if (el) el.removeAttribute('aria-busy'); }
+  },
+  usoRefresh: () => { ls.set('pulso.gh', null); usoState.gh = null; viewUso(true); },
+  periodo: el => { ui.periodo = el.dataset.v; render(); },
+  barTip: el => {
+    const cap = document.getElementById('cap-' + el.dataset.chart); if (cap) cap.textContent = el.dataset.tip;
+    el.ownerSVGElement.querySelectorAll('.bar.sel').forEach(b => b.classList.remove('sel'));
+    el.querySelector('.bar').classList.add('sel');
+  },
+  exportJSON: () => download(`pulso-copia-${todayISO()}.json`, JSON.stringify(data, null, 1), 'application/json'),
+  exportStudents: () => {
+    const st = stats('Todos');
+    download(`pulso-jovenes-${todayISO()}.csv`, toCSV([['ID', 'Nombres', 'Apellidos', 'Edad', 'Fecha de nacimiento', 'Acudiente', 'Celular', 'Fecha de ingreso', 'Estado', 'Clases asistidas', 'Clases desde ingreso', '% asistencia', 'Ausencias seguidas', 'Última asistencia'],
+      ...data.students.map(s => { const p = st.per.get(s.id); return [s.id, s.nombres, s.apellidos, ageOf(s) ?? '', s.fechaNacimiento || '', s.acudiente || '', s.telefono || '', s.fechaIngreso || '', s.placeholder ? 'Por identificar' : ESTADOS[p.estado].label, p.asistidas, p.relevant, Math.round(p.pct * 100), p.seguidas, p.lastFecha || '']; })]), 'text/csv');
+  },
+  exportClasses: () => download(`pulso-clases-${todayISO()}.csv`, toCSV([['ID', 'Fecha', 'Servicio', 'Tema', 'Quién la dio', 'Asistentes', 'Nombres'],
+    ...data.classes.slice().sort((a, b) => a.fecha.localeCompare(b.fecha)).map(c => [c.id, c.fecha, c.servicio || '', c.tema || '', c.ponente || '', c.asistentes.length, c.asistentes.map(id => { const s = DB.student(id); return s ? fullName(s) : id; }).join(', ')])]), 'text/csv'),
+  demo: () => Auth.isSuper() && !CLOUD && confirmSheet('¿Cargar datos de ejemplo?', 'Verás la app con 42 jóvenes y 26 clases inventados. Reemplaza lo que haya en este dispositivo.', 'Cargar ejemplo', async () => { ui.servicio = null; await DB.replaceAll(demoData()); toast('Datos de ejemplo cargados'); location.hash = '#/inicio'; render(); }),
+  wipe: () => Auth.isSuper() && confirmSheet('¿Borrar todos los datos?', CLOUD ? 'Se eliminarán todos los jóvenes y clases de la base de datos, para todos los profesores. Descarga una copia de seguridad antes. No se puede deshacer.' : 'Se eliminarán todos los jóvenes y clases de este dispositivo. Descarga una copia antes si la necesitas.', 'Borrar todo', async () => { await DB.replaceAll(defaults()); ui.servicio = null; toast('Datos borrados'); location.hash = '#/inicio'; render(); }, true),
+  install: async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; render(); },
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const fn = ACT[el.dataset.act]; if (!fn) return;
+  if (el.tagName !== 'A') e.preventDefault();
+  fn(el, e);
+});
+
+/* ---------- arranque ---------- */
+(async function boot() {
+  DB.load();
+  if (CLOUD) {
+    try { await loadScript(SUPABASE_JS); } catch (e) {}
+    if (window.supabase && window.supabase.createClient) {
+      sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey, {auth: {persistSession: true, autoRefreshToken: true, storageKey: 'pulso.auth'}});
+    }
+    await Auth.init();
+    if (Auth.session()) { Uso.add(0, 0, 1); Sync.subscribe(); Sync.flush(); Sync.pull(); }
+    window.addEventListener('online', () => { Sync.state = 'ok'; Sync.ui(); Sync.flush(); Sync.pull(); });
+    window.addEventListener('offline', () => Sync.ui());
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && Auth.session()) { Sync.flush(); if (Date.now() - Sync.lastPull > 15000) Sync.pull(); } });
+    if (sb) sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT' && CloudAuth.me && navigator.onLine) { CloudAuth.me = null; Sync.ui(); render(); } });
+  }
+  render(); Sync.ui();
+  setTimeout(downloadsNs, 0);
+})();
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
