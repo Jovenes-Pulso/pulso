@@ -43,6 +43,7 @@ create table if not exists public.clases (
   -- si se elimina la cuenta del profesor, la clase conserva su nombre
   registrado_por        uuid references public.perfiles(id) on delete set null,
   registrado_por_nombre text,
+  archivada             boolean not null default false,
   creado                timestamptz not null default now()
 );
 create index if not exists clases_fecha_idx on public.clases (fecha);
@@ -61,7 +62,8 @@ create table if not exists public.ajustes (
   grupo    text not null default 'Grupo de jóvenes',
   servicio text,
   riesgo   int not null default 3,
-  inactivo int not null default 8
+  inactivo int not null default 8,
+  incluir_archivadas boolean not null default false
 );
 insert into public.ajustes (id) values (1) on conflict do nothing;
 
@@ -130,6 +132,23 @@ grant select, update                 on public.ajustes     to authenticated;
 grant all on public.perfiles, public.jovenes, public.clases, public.asistencias, public.ajustes to service_role;
 grant execute on function public.es_miembro()    to authenticated, service_role;
 grant execute on function public.es_superadmin() to authenticated, service_role;
+
+-- ---------- Solo el super administrador archiva clases ----------
+create or replace function public.solo_admin_archiva() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then return new; end if;
+  if tg_op = 'INSERT' and new.archivada and not public.es_superadmin() then
+    raise exception 'Solo el super administrador puede archivar clases' using errcode = '42501';
+  end if;
+  if tg_op = 'UPDATE' and new.archivada is distinct from old.archivada and not public.es_superadmin() then
+    raise exception 'Solo el super administrador puede archivar clases' using errcode = '42501';
+  end if;
+  return new;
+end $$;
+drop trigger if exists clases_archivar on public.clases;
+create trigger clases_archivar before insert or update on public.clases
+for each row execute function public.solo_admin_archiva();
 
 -- ---------- Tiempo real ----------
 -- Para que la asistencia que marca un profesor aparezca sola en el

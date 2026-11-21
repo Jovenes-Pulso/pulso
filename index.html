@@ -304,6 +304,24 @@ body.locked .syncbar{bottom:calc(var(--safe-b) + 16px)}
 body:has(#syncbar) .toast{bottom:calc(var(--tab-h) + var(--safe-b) + 62px)}
 .syncbar button{color:var(--hl);font-weight:700;margin-left:6px;text-decoration:underline}
 
+/* ---------- selección y archivo ---------- */
+.chk{width:26px;height:26px;border-radius:50%;flex:none;display:grid;place-items:center;box-shadow:inset 0 0 0 2px var(--ink-3);background:var(--surface)}
+.chk svg{width:16px;height:16px;opacity:0}
+.item.on{background:var(--hl-soft)}
+.item.on .chk{background:var(--ink);box-shadow:none;color:var(--hl)}
+.item.on .chk svg{opacity:1}
+.selbar{position:fixed;left:0;right:0;bottom:calc(var(--tab-h) + var(--safe-b));z-index:9;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px}
+.selbar-in{max-width:560px;margin:0 auto;display:flex;gap:10px;align-items:center}
+.selbar .btn{min-height:46px}
+.selbar .grow{flex:1}
+body.selmode .toast,body.selmode .syncbar{bottom:calc(var(--tab-h) + var(--safe-b) + 80px)}
+body.selmode:has(#syncbar) .toast{bottom:calc(var(--tab-h) + var(--safe-b) + 126px)}
+body.selmode .app{padding-bottom:calc(var(--tab-h) + var(--safe-b) + 96px)}
+.b-arch{background:#E8EBF4;color:var(--ink-2)}
+.b-arch::before{display:none}
+.arch-note{background:#E8EBF4;border-radius:var(--r-md);padding:12px 14px;font-size:14.5px;margin-top:14px;display:flex;gap:10px;align-items:flex-start}
+.arch-note svg{width:20px;height:20px;flex:none;color:var(--ink-2);margin-top:1px}
+
 /* ---------- uso de servicios ---------- */
 .prov{display:flex;gap:12px;align-items:center;margin:0 2px}
 .prov h2{margin:0}
@@ -458,6 +476,8 @@ const I = {
   chart:'<path d="M4 20h16"/><rect x="5.5" y="11" width="3" height="6.5" rx="1"/><rect x="10.5" y="6" width="3" height="11.5" rx="1"/><rect x="15.5" y="9" width="3" height="8.5" rx="1"/>',
   phoneOff:'<path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/><path d="M3 3l18 18"/>',
   gauge:'<path d="M4.5 17a8 8 0 1 1 15 0"/><path d="m12 13 3.5-4"/><circle cx="12" cy="13" r="1.3"/>',
+  archive:'<rect x="3.5" y="4" width="17" height="4.5" rx="1.2"/><path d="M5 8.5V18a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 18V8.5M10 12.5h4"/>',
+  select:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
   link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7L11.5 6.8"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5"/>',
 };
 const ic = (name, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${I[name]}</svg>`;
@@ -467,7 +487,7 @@ const ic = (name, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="c
    la interfaz no cambie cuando conectemos la base remota.
    ========================================================= */
 const KEY = CLOUD ? 'pulso.cloud.v1' : 'pulso.v1';
-const defaults = () => ({version: 1, students: [], classes: [], settings: {grupo: 'Grupo de jóvenes', servicio: '', riesgo: 3, inactivo: 8}});
+const defaults = () => ({version: 1, students: [], classes: [], settings: {grupo: 'Grupo de jóvenes', servicio: '', riesgo: 3, inactivo: 8, incluirArchivadas: false}});
 let data = defaults();
 let storageOK = true;
 
@@ -495,6 +515,19 @@ const DB = {
     data.students = data.students.filter(s => s.id !== id);
     data.classes.forEach(c => { c.asistentes = c.asistentes.filter(x => x !== id); });
     DB.persist(); Sync.push({t: 'delJ', ids: [id]});
+  },
+  async deleteStudents(ids) {
+    const del = new Set(ids);
+    data.students = data.students.filter(s => !del.has(s.id));
+    data.classes.forEach(c => { c.asistentes = c.asistentes.filter(x => !del.has(x)); });
+    DB.persist(); Sync.push({t: 'delJ', ids: [...del]});
+  },
+  async setArchived(ids, on) {
+    const set = new Set(ids); const changed = [];
+    data.classes.forEach(c => { if (set.has(c.id) && !!c.archivada !== on) { c.archivada = on; changed.push(c); } });
+    if (!changed.length) return 0;
+    DB.persist(); Sync.push({t: 'upC', rows: changed.map(C.toRow)});
+    return changed.length;
   },
   async saveClass(c) {
     c.id = c.id || uid();
@@ -529,7 +562,7 @@ const DB = {
   },
   async saveSettings(s) {
     data.settings = Object.assign(data.settings, s); DB.persist();
-    const t = data.settings; Sync.push({t: 'set', row: {grupo: t.grupo, servicio: t.servicio || null, riesgo: Number(t.riesgo) || 3, inactivo: Number(t.inactivo) || 8}});
+    Sync.push({t: 'set', row: settingsRow(data.settings)});
   },
   async replaceAll(d) {
     data = Object.assign(defaults(), d); data.settings = Object.assign(defaults().settings, d.settings || {}); DB.persist();
@@ -540,7 +573,7 @@ const DB = {
     if (data.students.length) Sync.push({t: 'upJ', rows: data.students.map(J.toRow)});
     if (data.classes.length) Sync.push({t: 'upC', rows: data.classes.map(C.toRow)});
     const ar = attRows(data.classes, vj, vc); if (ar.length) Sync.push({t: 'upA', rows: ar});
-    const t = data.settings; Sync.push({t: 'set', row: {grupo: t.grupo, servicio: t.servicio || null, riesgo: Number(t.riesgo) || 3, inactivo: Number(t.inactivo) || 8}});
+    Sync.push({t: 'set', row: settingsRow(data.settings)});
   },
   async mergeAll(d) {
     for (const s of d.students) { const i = data.students.findIndex(x => x.id === s.id); if (i < 0) data.students.push(s); else data.students[i] = Object.assign(data.students[i], s); }
@@ -677,11 +710,16 @@ const J = {
     acudiente: r.acudiente || '', telefono: r.telefono || '', fechaIngreso: r.fecha_ingreso || '', foto: r.foto || '', notas: r.notas || '',
     placeholder: !!r.por_identificar, idsAnteriores: r.ids_anteriores || []}),
 };
+// ¿La base de datos ya tiene las columnas para archivar? (archivar.sql). En modo local siempre sí.
+const archOK = () => !CLOUD || ls.get('pulso.archOK') === true;
+const settingsRow = t => Object.assign({grupo: t.grupo, servicio: t.servicio || null, riesgo: Number(t.riesgo) || 3, inactivo: Number(t.inactivo) || 8},
+  archOK() ? {incluir_archivadas: !!t.incluirArchivadas} : {});
 const C = {
   toRow: c => ({id: c.id, fecha: c.fecha, servicio: SERVICIO, tema: nz(c.tema), ponente: nz(c.ponente), notas: nz(c.notas),
-    registrado_por: UUID_RE.test(c.registradoPorId || '') ? c.registradoPorId : null, registrado_por_nombre: nz(c.registradoPor)}),
-  fromRow: r => ({id: r.id, fecha: r.fecha, servicio: r.servicio || '', tema: r.tema || '', ponente: r.ponente || '', notas: r.notas || '',
-    registradoPor: r.registrado_por_nombre || '', registradoPorId: r.registrado_por || ''}),
+    registrado_por: UUID_RE.test(c.registradoPorId || '') ? c.registradoPorId : null, registrado_por_nombre: nz(c.registradoPor),
+    ...(archOK() ? {archivada: !!c.archivada} : {})}),
+  fromRow: r => Object.assign({id: r.id, fecha: r.fecha, servicio: r.servicio || '', tema: r.tema || '', ponente: r.ponente || '', notas: r.notas || '',
+    registradoPor: r.registrado_por_nombre || '', registradoPorId: r.registrado_por || ''}, 'archivada' in r ? {archivada: !!r.archivada} : {}),
 };
 const chunks = (a, n) => { const r = []; for (let i = 0; i < a.length; i += n) r.push(a.slice(i, i + n)); return r; };
 const isNetwork = e => !!e && (e instanceof TypeError || /failed to fetch|fetch failed|network|load failed|networkerror|failed to send/i.test(String(e.message || e)));
@@ -725,7 +763,7 @@ const applyOp = {
   delC: (d, op) => { const ids = new Set(op.ids); d.classes = d.classes.filter(c => !ids.has(c.id)); },
   mark: (d, op) => { const c = d.classes.find(x => x.id === op.c); if (!c) return; const has = c.asistentes.includes(op.j); if (op.on && !has) c.asistentes.push(op.j); if (!op.on && has) c.asistentes = c.asistentes.filter(x => x !== op.j); },
   upA: (d, op) => op.rows.forEach(r => { const c = d.classes.find(x => x.id === r.clase_id); if (c && !c.asistentes.includes(r.joven_id)) c.asistentes.push(r.joven_id); }),
-  set: (d, op) => { Object.assign(d.settings, {grupo: op.row.grupo, servicio: op.row.servicio || '', riesgo: op.row.riesgo, inactivo: op.row.inactivo}); },
+  set: (d, op) => { Object.assign(d.settings, {grupo: op.row.grupo, servicio: op.row.servicio || '', riesgo: op.row.riesgo, inactivo: op.row.inactivo}, 'incluir_archivadas' in op.row ? {incluirArchivadas: !!op.row.incluir_archivadas} : {}); },
   wipe: d => { d.students = []; d.classes = []; },
 };
 async function fetchAll(table, cols, orders) {
@@ -797,6 +835,7 @@ const Sync = {
         sb.from('ajustes').select('*').eq('id', 1).maybeSingle(), sb.from('perfiles').select('id,usuario,nombre,rol,creado').order('nombre'),
       ]);
       if (aj.error) throw aj.error; if (ps.error) throw ps.error;
+      if (aj.data) ls.set('pulso.archOK', 'incluir_archivadas' in aj.data && (!cs.length || 'archivada' in cs[0]));
       const me = Auth.session(); if (!me) return;
       const mine = (ps.data || []).find(p => p.id === me.uid);
       if (!mine) { await CloudAuth.kick(); return; }
@@ -804,7 +843,7 @@ const Sync = {
       CloudUsers.list = ps.data || []; ls.set(UCACHE, CloudUsers.list);
       const byC = new Map(); as.forEach(a => { if (!byC.has(a.clase_id)) byC.set(a.clase_id, []); byC.get(a.clase_id).push(a.joven_id); });
       const d = {version: 1, students: js.map(J.fromRow), classes: cs.map(r => Object.assign(C.fromRow(r), {asistentes: byC.get(r.id) || []})),
-        settings: Object.assign(defaults().settings, aj.data ? {grupo: aj.data.grupo, servicio: aj.data.servicio || '', riesgo: aj.data.riesgo, inactivo: aj.data.inactivo} : {})};
+        settings: Object.assign(defaults().settings, aj.data ? {grupo: aj.data.grupo, servicio: aj.data.servicio || '', riesgo: aj.data.riesgo, inactivo: aj.data.inactivo, incluirArchivadas: !!aj.data.incluir_archivadas} : {})};
       Sync.queue.forEach(op => { const f = applyOp[op.t]; if (f) f(d, op); });
       data = d; DB.persist(); Sync.lastPull = Date.now();
       if (Auth.isSuper()) unificarServicio();
@@ -997,10 +1036,17 @@ function unificarServicio() {
   return otras.length;
 }
 
-function stats() {
-  const key = 'Todos';
+// Estadísticas: solo clases activas, salvo que el ajuste incluya las archivadas.
+// stats('todas') usa todo el historial (para ordenar y mostrar la lista al tomar asistencia).
+const incluirArch = () => !!data.settings.incluirArchivadas;
+const hayArchivadas = () => data.classes.some(c => c.archivada);
+function stats(scope) {
+  const all = scope === 'todas' || incluirArch();
+  const key = all ? 'todas' : 'activas';
   if (cache.has(key)) return cache.get(key);
-  const classes = data.classes.slice().sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
+  const classes = data.classes.filter(c => all || !c.archivada).slice().sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
+  const firstEver = new Map();
+  data.classes.forEach(c => c.asistentes.forEach(id => { const f = firstEver.get(id); if (!f || c.fecha < f) firstEver.set(id, c.fecha); }));
   const n = classes.length;
   const att = new Map();
   classes.forEach((c, i) => c.asistentes.forEach(id => { if (!att.has(id)) att.set(id, []); att.get(id).push(i); }));
@@ -1022,14 +1068,17 @@ function stats() {
     for (let i = start; i < n; i++) { if (set.has(i)) { cur++; if (cur > best) best = cur; } else cur = 0; }
     const strip = [];
     for (let i = Math.max(0, n - 12); i < n; i++) strip.push(i < start ? -1 : set.has(i) ? 1 : 0);
+    const fe = firstEver.get(s.id) || null;
+    const veterano = !!fe && (first == null || fe < classes[first].fecha); // ya venía antes (en clases archivadas)
     let estado;
-    if (!asistidas) estado = start >= n - 4 && !s.placeholder ? 'nuevo' : 'inactivo';
+    if (!asistidas) estado = !fe ? (start >= n - 4 && !s.placeholder ? 'nuevo' : 'inactivo')
+      : seguidas >= INA ? 'inactivo' : seguidas >= R ? 'riesgo' : 'ocasional'; // venía antes y aún no asiste en este periodo
     else if (seguidas >= INA) estado = 'inactivo';
-    else if (first >= n - 4) estado = 'nuevo';
+    else if (first >= n - 4 && !veterano) estado = 'nuevo';
     else if (seguidas >= R) estado = 'riesgo';
     else if (pct >= .7) estado = 'constante';
     else estado = 'ocasional';
-    per.set(s.id, {asistidas, relevant, pct, seguidas, best, actual: cur, strip, estado, set, start, first,
+    per.set(s.id, {asistidas, relevant, pct, seguidas, best, actual: cur, strip, estado, set, start, first, veterano, firstEverFecha: fe,
       lastFecha: last != null ? classes[last].fecha : null, firstFecha: first != null ? classes[first].fecha : null});
   }
   const r = {key, classes, n, per};
@@ -1042,7 +1091,7 @@ const badge = e => `<span class="badge b-${e}">${ESTADOS[e].label}</span>`;
 /* =========================================================
    Estado de la interfaz y router
    ========================================================= */
-const ui = {periodo: '3m', servicio: null, filtro: 'todos', q: '', orden: 'pct', rq: '', rsort: 'frecuentes', showInactive: false, cq: ''};
+const ui = {selJ: null, selC: null, cfiltro: 'activas', periodo: '3m', servicio: null, filtro: 'todos', q: '', orden: 'pct', rq: '', rsort: 'frecuentes', showInactive: false, cq: ''};
 const curServicio = () => 'Todos';
 
 const routes = [
@@ -1061,6 +1110,7 @@ const routes = [
 ];
 function render() {
   const h = location.hash || '#/inicio';
+  document.body.classList.toggle('selmode', !!(ui.selJ || ui.selC));
   const ses = Auth.session();
   document.body.classList.toggle('locked', !ses);
   if (!ses) { viewLogin(); return; }
@@ -1076,7 +1126,7 @@ function render() {
   }
   location.hash = '#/inicio';
 }
-window.addEventListener('hashchange', () => { closeSheet(); render(); window.scrollTo(0, 0); });
+window.addEventListener('hashchange', () => { closeSheet(); ui.selJ = null; ui.selC = null; render(); window.scrollTo(0, 0); });
 const setView = html => { $('#view').innerHTML = html; };
 const topbar = (title, sub = '', left = '', right = '') => `<header class="top">${left}<h1>${title}${sub ? `<span class="sub">${sub}</span>` : ''}</h1>${right}</header>`;
 const backBtn = href => `<a class="icon-btn" href="${href}" aria-label="Volver">${ic('back')}</a>`;
@@ -1176,7 +1226,9 @@ function viewHome() {
       <p class="hero-cap" style="max-width:none;margin-top:12px">La línea punteada es el promedio de las últimas 8 clases: <b class="num">${a8.toFixed(1).replace('.', ',')}</b> jóvenes${d != null && Math.abs(d) >= .05 ? `, ${Math.abs(d).toFixed(1).replace('.', ',')} ${d > 0 ? 'más' : 'menos'} que las 8 anteriores` : ''}.</p>
     </section>`;
   } else {
-    hero = `<section class="panel"><h2>Todavía no hay clases</h2><p class="muted small" style="margin-top:6px">Toma la primera lista para empezar a ver la asistencia.</p></section>`;
+    hero = hayArchivadas()
+      ? `<section class="panel"><h2>No hay clases activas</h2><p class="muted small" style="margin-top:6px">Las clases anteriores están archivadas. Toma la primera lista para empezar a medir este periodo.</p></section>`
+      : `<section class="panel"><h2>Todavía no hay clases</h2><p class="muted small" style="margin-top:6px">Toma la primera lista para empezar a ver la asistencia.</p></section>`;
   }
 
   // seguimiento
@@ -1205,7 +1257,7 @@ function viewHome() {
   let ret = '';
   if (n >= 6) {
     const from = Math.max(1, n - 12), to = n - 2;
-    const newcomers = real.filter(s => { const p = per.get(s.id); return p && p.first != null && p.first >= from && p.first < to; });
+    const newcomers = real.filter(s => { const p = per.get(s.id); return p && p.first != null && p.first >= from && p.first < to && !p.veterano; });
     if (newcomers.length) {
       const back = newcomers.filter(s => per.get(s.id).asistidas >= 2).length;
       ret = `
@@ -1270,7 +1322,11 @@ function followRow(s, p) {
    ========================================================= */
 function viewStudents() {
   const st = stats(curServicio());
-  setView(topbar('Jóvenes', plural(data.students.filter(s => !s.placeholder).length, 'registrado'), '', `<button class="icon-btn" data-act="exportXLSX" aria-label="Descargar Excel">${ic('download')}</button><button class="icon-btn solid" data-act="newStudent" aria-label="Agregar joven">${ic('plus')}</button>`) + `
+  const sel = ui.selJ;
+  const head = sel
+    ? topbar('<span id="seltitle">Selecciona jóvenes</span>', 'Toca cada joven que quieras eliminar', `<button class="icon-btn" data-act="selJoff" aria-label="Cancelar selección">${ic('x')}</button>`)
+    : topbar('Jóvenes', plural(data.students.filter(s => !s.placeholder).length, 'registrado'), '', `${Auth.isSuper() ? `<button class="icon-btn" data-act="selJ" aria-label="Seleccionar varios">${ic('select')}</button>` : ''}<button class="icon-btn" data-act="exportXLSX" aria-label="Descargar Excel">${ic('download')}</button><button class="icon-btn solid" data-act="newStudent" aria-label="Agregar joven">${ic('plus')}</button>`);
+  setView(head + `
     <div class="search"><label class="sr" for="q">Buscar joven</label>${ic('search')}<input id="q" class="input" type="search" placeholder="Buscar por nombre o acudiente" value="${esc(ui.q)}" autocomplete="off"></div>
     <div class="chips" id="fchips" style="margin-top:10px"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 2px 10px;gap:10px">
@@ -1280,7 +1336,8 @@ function viewStudents() {
           <option value="pct">Asistencia</option><option value="nombre">Nombre</option><option value="seguidas">Ausencias seguidas</option><option value="edad">Edad</option><option value="reciente">Más recientes</option>
         </select></label>
     </div>
-    <div id="slist"></div>`);
+    <div id="slist"></div>
+    ${sel ? `<div class="selbar"><div class="selbar-in"><button class="btn ghost grow" data-act="selAllJ" id="selallj">Todos</button><button class="btn danger grow" data-act="delSelJ" id="seldelj" disabled>${ic('trash')}Eliminar</button></div></div>` : ''}`);
   $('#orden').value = ui.orden;
   $('#q').addEventListener('input', e => { ui.q = e.target.value; drawStudents(st); });
   $('#orden').addEventListener('change', e => { ui.orden = e.target.value; drawStudents(st); });
@@ -1312,11 +1369,22 @@ function drawStudents(st) {
   };
   list.sort(by[ui.orden] || by.pct);
   $('#rescount').textContent = plural(list.length, 'joven', 'jóvenes');
+  const sel = ui.selJ;
+  ui.visJ = list.map(s => s.id);
+  if (sel) {
+    const n = sel.size, allOn = list.length && list.every(s => sel.has(s.id));
+    const t = $('#seltitle'); if (t) t.textContent = n ? `${plural(n, 'joven seleccionado', 'jóvenes seleccionados')}` : 'Selecciona jóvenes';
+    const bAll = $('#selallj'); if (bAll) bAll.textContent = allOn ? 'Quitar todos' : `Todos (${list.length})`;
+    const bDel = $('#seldelj'); if (bDel) { bDel.disabled = !n; bDel.innerHTML = `${ic('trash')}Eliminar${n ? ` (${n})` : ''}`; }
+  }
   $('#slist').innerHTML = list.length ? `<div class="list">${list.map(s => {
     const p = per.get(s.id), a = ageOf(s);
     const meta = s.placeholder ? `${plural(p.asistidas, 'asistencia')} sin vincular` : [a ? `${a} años` : '', s.curso ? esc(s.curso) : '', p.relevant ? `${p.asistidas} de ${p.relevant} clases` : 'Sin clases aún'].filter(Boolean).join(', ') + (sinContacto(s) ? ` <span class="nophone">${ic('phoneOff')}Sin celular</span>` : '');
-    return `<a class="item" href="#/joven/${s.id}">${avatar(s)}<div class="body"><div class="name">${esc(fullName(s))}</div><div class="meta">${meta}</div><div class="line2">${stripHTML(p.strip)}</div></div>
-      <div class="end">${p.relevant ? `<span class="pct num">${pctTxt(p.pct)}</span>` : ''}${s.placeholder ? '' : badge(p.estado)}</div></a>`;
+    const inner = `${avatar(s)}<div class="body"><div class="name">${esc(fullName(s))}</div><div class="meta">${meta}</div><div class="line2">${stripHTML(p.strip)}</div></div>
+      <div class="end">${p.relevant ? `<span class="pct num">${pctTxt(p.pct)}</span>` : ''}${s.placeholder ? '' : badge(p.estado)}</div>`;
+    return sel
+      ? `<button class="item${sel.has(s.id) ? ' on' : ''}" data-act="pickJ" data-id="${s.id}" aria-pressed="${sel.has(s.id)}"><span class="chk" aria-hidden="true">${ic('check')}</span>${inner}</button>`
+      : `<a class="item" href="#/joven/${s.id}">${inner}</a>`;
   }).join('')}</div>` : `<div class="empty"><h2>No hay jóvenes con ese filtro</h2><p>Prueba con otro nombre o quita el filtro.</p><button class="btn ghost" data-act="filtro" data-v="todos">Ver todos</button></div>`;
 }
 
@@ -1334,6 +1402,7 @@ function viewStudent(id) {
   st.classes.forEach((c, i) => { if (i < p.start) return; const k = c.fecha.slice(0, 7); if (!months.has(k)) months.set(k, []); months.get(k).push(p.set.has(i) ? 1 : 0); });
   const mk = [...months.keys()].reverse().slice(0, 8);
   const hist = st.classes.map((c, i) => ({c, i})).filter(x => x.i >= p.start).reverse().slice(0, 12);
+  const archVino = incluirArch() ? 0 : data.classes.filter(c => c.archivada && c.asistentes.includes(s.id)).length;
 
   const placeholderBox = s.placeholder ? `
     <div class="notice" style="margin-top:16px">
@@ -1355,6 +1424,7 @@ function viewStudent(id) {
       <div class="kpi"><div class="k num">${p.seguidas}</div><div class="l">${p.seguidas === 1 ? 'Ausencia' : 'Ausencias'} desde su última clase</div></div>
       <div class="kpi"><div class="k" style="font-size:22px;line-height:1.1">${p.lastFecha ? fmtShort(p.lastFecha) : '—'}</div><div class="l">Última asistencia${p.firstFecha ? `. Primera: ${fmtShort(p.firstFecha)}` : ''}</div></div>
     </div>
+    ${archVino ? `<p class="hint" style="margin:10px 2px 0">Además vino a ${plural(archVino, 'clase archivada', 'clases archivadas')}, que no se cuentan aquí.</p>` : ''}
     ${mk.length ? `<section class="section"><h2>Asistencia por mes</h2><div class="panel months" style="margin-top:10px;padding-top:6px;padding-bottom:6px">${mk.map(k => { const v = months.get(k); return `<div class="m"><span class="lbl">${dateOf(k + '-15').toLocaleDateString('es-CO', {month: 'short'}).replace('.', '') + ' ' + k.slice(2, 4)}</span><span class="dots">${v.map(x => `<i class="${x ? 'y' : ''}"></i>`).join('')}</span><span class="c num">${v.filter(Boolean).length}/${v.length}</span></div>`; }).join('')}</div></section>` : ''}
     ${hist.length ? `<section class="section"><h2>Últimas clases</h2><div class="panel hist" style="margin-top:10px;padding-top:4px;padding-bottom:4px">${hist.map(({c, i}) => { const y = p.set.has(i); return `<a class="h" href="#/clase/${c.id}"><span class="mark ${y ? 'y' : ''}" aria-label="${y ? 'Asistió' : 'Faltó'}">${y ? ic('check') : ''}</span><span class="t"><b>${esc(c.tema || 'Clase sin tema')}</b><small>${fmtLong(c.fecha)}${y ? '' : '. Faltó'}</small></span></a>`; }).join('')}</div></section>` : ''}
     ${s.notas ? `<section class="section"><h2>Notas</h2><div class="panel" style="margin-top:10px;white-space:pre-wrap">${esc(s.notas)}</div></section>` : ''}
@@ -1404,15 +1474,15 @@ function studentSheet(id, opts = {}) {
    TOMAR LISTA
    ========================================================= */
 function viewListStart() {
-  const today = data.classes.find(c => c.fecha === todayISO());
+  const today = data.classes.find(c => c.fecha === todayISO() && !c.archivada);
   if (today) { location.replace('#/lista/' + today.id); return; }
-  const recent = data.classes.slice().sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 3);
+  const recent = data.classes.filter(c => !c.archivada).sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 3);
   setView(topbar('Tomar lista', 'Primero, los datos de la clase') + `
     <form id="cform" class="panel" autocomplete="off">
       ${classFields({fecha: todayISO()})}
       <button class="btn hl block" type="submit" style="margin-top:20px">${ic('check')}Empezar a marcar</button>
     </form>
-    ${recent.length ? `<section class="section"><h2>O continúa una lista reciente</h2><div class="list" style="margin-top:10px">${recent.map(classRow).join('')}</div></section>` : ''}`);
+    ${recent.length ? `<section class="section"><h2>O continúa una lista reciente</h2><div class="list" style="margin-top:10px">${recent.map(c => classRow(c)).join('')}</div></section>` : ''}`);
   $('#cform').addEventListener('submit', async e => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target)); Object.keys(f).forEach(k => f[k] = String(f[k]).trim());
@@ -1443,7 +1513,7 @@ function viewRoster(id) {
   drawRoster(c);
 }
 function drawRoster(c) {
-  const st = stats(c.servicio || 'Todos');
+  const st = stats('todas');
   const present = new Set(c.asistentes);
   const q = norm(ui.rq);
   let list = data.students.filter(s => !s.placeholder || present.has(s.id));
@@ -1466,36 +1536,61 @@ function drawRoster(c) {
 /* =========================================================
    CLASES
    ========================================================= */
-function classRow(c) {
+function classRow(c, sel) {
   const max = Math.max(1, ...data.classes.map(x => x.asistentes.length));
-  return `<a class="item" href="#/clase/${c.id}"><div class="date-block"><b class="num">${dateOf(c.fecha).getDate()}</b><small>${fmt(c.fecha, {weekday: 'short'}).replace('.', '')}</small></div>
-    <div class="body"><div class="name">${esc(c.tema || 'Clase sin tema')}</div><div class="meta">${[fmt(c.fecha, {month: 'long'}), c.ponente ? 'con ' + esc(c.ponente) : ''].filter(Boolean).join(', ')}</div></div>
-    <div class="end"><span class="cnt num">${c.asistentes.length}</span><span class="mini"><span style="width:${c.asistentes.length / max * 100}%"></span></span></div></a>`;
+  const inner = `<div class="date-block"><b class="num">${dateOf(c.fecha).getDate()}</b><small>${fmt(c.fecha, {weekday: 'short'}).replace('.', '')}</small></div>
+    <div class="body"><div class="name">${esc(c.tema || 'Clase sin tema')}</div><div class="meta">${[fmt(c.fecha, {month: 'long'}), c.ponente ? 'con ' + esc(c.ponente) : ''].filter(Boolean).join(', ')}</div>${c.archivada ? `<div style="margin-top:5px"><span class="badge b-arch">Archivada</span></div>` : ''}</div>
+    <div class="end"><span class="cnt num">${c.asistentes.length}</span><span class="mini"><span style="width:${c.asistentes.length / max * 100}%"></span></span></div>`;
+  return sel
+    ? `<button class="item${sel.has(c.id) ? ' on' : ''}" data-act="pickC" data-id="${c.id}" aria-pressed="${sel.has(c.id)}"><span class="chk" aria-hidden="true">${ic('check')}</span>${inner}</button>`
+    : `<a class="item" href="#/clase/${c.id}">${inner}</a>`;
 }
 function viewClasses() {
-  setView(topbar('Clases', plural(data.classes.length, 'clase registrada', 'clases registradas'), '', `<a class="icon-btn solid" href="#/lista" aria-label="Nueva clase">${ic('plus')}</a>`) + `
+  const sup = Auth.isSuper(), sel = ui.selC;
+  const nArch = data.classes.filter(c => c.archivada).length, nAct = data.classes.length - nArch;
+  if (!nArch && ui.cfiltro === 'archivadas') ui.cfiltro = 'activas';
+  const archView = ui.cfiltro === 'archivadas';
+  const head = sel
+    ? topbar('<span id="seltitle">Selecciona clases</span>', archView ? 'Toca las clases que quieras desarchivar' : 'Toca las clases que quieras archivar', `<button class="icon-btn" data-act="selCoff" aria-label="Cancelar selección">${ic('x')}</button>`)
+    : topbar('Clases', nArch ? `${plural(nAct, 'activa')}, ${plural(nArch, 'archivada')}` : plural(data.classes.length, 'clase registrada', 'clases registradas'), '',
+        `${sup && data.classes.length ? `<button class="icon-btn" data-act="selC" aria-label="Seleccionar para archivar">${ic('select')}</button>` : ''}<a class="icon-btn solid" href="#/lista" aria-label="Nueva clase">${ic('plus')}</a>`);
+  setView(head + `
     <div class="search"><label class="sr" for="cq">Buscar clase</label>${ic('search')}<input id="cq" class="input" type="search" placeholder="Buscar por tema o quién la dio" value="${esc(ui.cq)}" autocomplete="off"></div>
-    <div id="clist"></div>`);
+    ${nArch ? `<div class="chips" role="group" aria-label="Clases" style="margin-top:10px"><button class="chip" data-act="cfiltro" data-v="activas" aria-pressed="${!archView}">Activas<span class="c num">${nAct}</span></button><button class="chip" data-act="cfiltro" data-v="archivadas" aria-pressed="${archView}">${ic('archive', 'style="width:16px;height:16px"')}Archivadas<span class="c num">${nArch}</span></button></div>` : ''}
+    ${!sel && archView ? `<div class="arch-note">${ic('archive')}<span>${incluirArch() ? 'Por ahora estas clases sí cuentan en las estadísticas, porque en Ajustes elegiste incluir las archivadas.' : 'Estas clases no cuentan en las estadísticas.'} Siguen guardadas con su asistencia.</span></div>` : ''}
+    ${sel ? `<div class="chips" id="yearchips" style="margin-top:10px"></div>` : ''}
+    <div id="clist"></div>
+    ${sel ? `<div class="selbar"><div class="selbar-in"><button class="btn ghost grow" data-act="selAllC" id="selallc">Todas</button><button class="btn primary grow" data-act="${archView ? 'unarchSelC' : 'archSelC'}" id="selactc" disabled>${ic('archive')}${archView ? 'Desarchivar' : 'Archivar'}</button></div></div>` : ''}`);
   $('#cq').addEventListener('input', e => { ui.cq = e.target.value; drawClasses(); });
   drawClasses();
 }
 function drawClasses() {
-  const q = norm(ui.cq);
-  const list = data.classes.filter(c => !q || norm((c.tema || '') + ' ' + (c.ponente || '') + ' ' + (c.servicio || '')).includes(q)).sort((a, b) => b.fecha.localeCompare(a.fecha));
-  if (!list.length) { $('#clist').innerHTML = `<div class="empty"><h2>${q ? 'Sin resultados' : 'Aún no hay clases'}</h2><p>${q ? 'Prueba con otra palabra del tema.' : 'Cada vez que tomas lista se crea una clase.'}</p>${q ? '' : `<a class="btn hl" href="#/lista">${ic('check')}Tomar la primera lista</a>`}</div>`; return; }
+  const q = norm(ui.cq), sel = ui.selC, archView = ui.cfiltro === 'archivadas';
+  const list = data.classes.filter(c => !!c.archivada === archView).filter(c => !q || norm((c.tema || '') + ' ' + (c.ponente || '') + ' ' + (c.servicio || '')).includes(q)).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  ui.visC = list.map(c => c.id);
+  if (sel) {
+    const n = sel.size, allOn = list.length && list.every(c => sel.has(c.id));
+    const t = $('#seltitle'); if (t) t.textContent = n ? plural(n, 'clase seleccionada', 'clases seleccionadas') : 'Selecciona clases';
+    const bAll = $('#selallc'); if (bAll) bAll.textContent = allOn ? 'Quitar todas' : `Todas (${list.length})`;
+    const bAct = $('#selactc'); if (bAct) { bAct.disabled = !n; bAct.innerHTML = `${ic('archive')}${archView ? 'Desarchivar' : 'Archivar'}${n ? ` (${n})` : ''}`; }
+    const years = [...new Set(list.map(c => c.fecha.slice(0, 4)))].sort().reverse();
+    const yc = $('#yearchips');
+    if (yc) yc.innerHTML = years.length > 0 ? years.map(y => { const ids = list.filter(c => c.fecha.startsWith(y)).map(c => c.id); const on = ids.every(id => sel.has(id)); return `<button class="chip" data-act="selYearC" data-v="${y}" aria-pressed="${on}">Todo ${y}<span class="c num">${ids.length}</span></button>`; }).join('') : '';
+  }
+  if (!list.length) { $('#clist').innerHTML = archView ? `<div class="empty"><h2>No hay clases archivadas</h2></div>` : `<div class="empty"><h2>${q ? 'Sin resultados' : 'Aún no hay clases activas'}</h2><p>${q ? 'Prueba con otra palabra del tema.' : 'Cada vez que tomas lista se crea una clase.'}</p>${q ? '' : `<a class="btn hl" href="#/lista">${ic('check')}Tomar lista</a>`}</div>`; return; }
   const groups = new Map();
   list.forEach(c => { const k = c.fecha.slice(0, 7); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(c); });
-  $('#clist').innerHTML = [...groups].map(([k, cs]) => `<h3 class="month-h">${dateOf(k + '-15').toLocaleDateString('es-CO', {month: 'long', year: 'numeric'})}</h3><div class="list">${cs.map(classRow).join('')}</div>`).join('');
+  $('#clist').innerHTML = [...groups].map(([k, cs]) => `<h3 class="month-h">${dateOf(k + '-15').toLocaleDateString('es-CO', {month: 'long', year: 'numeric'})}</h3><div class="list">${cs.map(c => classRow(c, sel)).join('')}</div>`).join('');
 }
 function viewClass(id) {
   const c = DB.cls(id);
   if (!c) { setView(topbar('No encontrada', '', backBtn('#/clases')) + `<div class="empty"><p>Esta clase ya no existe.</p><a class="btn ghost" href="#/clases">Volver a clases</a></div>`); return; }
-  const st = stats(c.servicio || 'Todos');
+  const st = c.archivada && !incluirArch() ? stats('todas') : stats();
   const present = new Set(c.asistentes);
   const att = c.asistentes.map(DB.student).filter(Boolean).sort((a, b) => fullName(a).localeCompare(fullName(b), 'es'));
   const idx = st.classes.findIndex(x => x.id === c.id);
   const missing = data.students.filter(s => !s.placeholder && !present.has(s.id)).filter(s => { const p = st.per.get(s.id); return p && p.start <= idx && p.pct >= .6 && p.asistidas >= 4; }).sort((a, b) => st.per.get(b.id).pct - st.per.get(a.id).pct);
-  const newHere = att.filter(s => st.per.get(s.id)?.first === idx);
+  const newHere = att.filter(s => st.per.get(s.id)?.first === idx && !st.per.get(s.id)?.veterano);
   const ranks = st.classes.map(x => x.asistentes.length);
   const avgAll = avg(ranks);
   const personChip = s => `<a class="person" href="#/joven/${s.id}">${avatar(s)}${esc(shortName(s))}</a>`;
@@ -1507,7 +1602,9 @@ function viewClass(id) {
       <div class="kpi dark"><div class="k num">${c.asistentes.length}</div><div class="l">jóvenes asistieron</div></div>
       <div class="kpi"><div class="k num">${avgAll ? (c.asistentes.length - avgAll >= 0 ? '+' : '−') + Math.abs(c.asistentes.length - avgAll).toFixed(1).replace('.', ',') : '—'}</div><div class="l">frente al promedio de ${avgAll.toFixed(1).replace('.', ',')} por clase</div></div>
     </div>
+    ${c.archivada ? `<div class="arch-note">${ic('archive')}<span><b>Clase archivada.</b> ${incluirArch() ? 'Por ahora sí cuenta en las estadísticas, porque en Ajustes elegiste incluir las archivadas.' : 'No cuenta en las estadísticas.'}</span></div>` : ''}
     <a class="btn hl block" style="margin-top:12px" href="#/lista/${c.id}">${ic('check')}Editar asistencia</a>
+    ${Auth.isSuper() ? `<button class="btn ghost block" style="margin-top:10px" data-act="${c.archivada ? 'unarchOne' : 'archOne'}" data-id="${c.id}">${ic('archive')}${c.archivada ? 'Desarchivar clase' : 'Archivar clase'}</button>` : ''}
     ${newHere.length ? `<section class="section"><h2>Primera vez</h2><div class="people" style="margin-top:10px">${newHere.map(personChip).join('')}</div></section>` : ''}
     ${missing.length ? `<section class="section"><h2>Faltaron de los que suelen venir</h2><div class="people" style="margin-top:10px">${missing.slice(0, 12).map(personChip).join('')}</div></section>` : ''}
     ${c.registradoPor ? `<p class="hint" style="margin-top:10px">Lista tomada por ${esc(c.registradoPor)}.</p>` : ''}
@@ -1568,6 +1665,11 @@ function viewMore() {
           <label class="field"><span>Inactivo tras</span><select class="input" name="inactivo">${[6, 8, 10, 12].map(v => `<option value="${v}" ${v == S.inactivo ? 'selected' : ''}>${v} ausencias</option>`).join('')}</select></label>
         </div>
         <p class="hint">Ausencias seguidas, contando desde la última vez que vino.</p>
+        <label class="field"><span>Clases archivadas en las estadísticas</span><select class="input" name="incluirArchivadas">
+          <option value="0" ${S.incluirArchivadas ? '' : 'selected'}>No incluirlas: solo cuentan las clases activas</option>
+          <option value="1" ${S.incluirArchivadas ? 'selected' : ''}>Incluirlas junto con las activas</option>
+        </select></label>
+        <p class="hint">Útil para comparar o sumar el periodo anterior. Archiva clases desde la pestaña Clases.</p>
         <button class="btn primary block" type="submit" style="margin-top:16px">Guardar ajustes</button>
       </form>
     </section>
@@ -1581,7 +1683,7 @@ function viewMore() {
   if (!sup) return;
   $('#setform').addEventListener('submit', async e => {
     e.preventDefault(); const f = Object.fromEntries(new FormData(e.target));
-    await DB.saveSettings({grupo: f.grupo.trim() || 'Grupo de jóvenes', riesgo: Number(f.riesgo), inactivo: Number(f.inactivo)});
+    await DB.saveSettings({grupo: f.grupo.trim() || 'Grupo de jóvenes', riesgo: Number(f.riesgo), inactivo: Number(f.inactivo), incluirArchivadas: f.incluirArchivadas === '1'});
     ui.servicio = null; toast('Ajustes guardados');
   });
   $('#restore').addEventListener('change', async e => {
@@ -1723,8 +1825,10 @@ function hbarRows(rows, fmtV) {
 }
 
 function viewStats() {
-  if (!data.classes.length) {
-    setView(topbar('Estadísticas', '', backBtn('#/inicio')) + `<div class="empty"><h2>Aún no hay clases</h2><p>Toma la primera lista para empezar a ver estadísticas.</p><a class="btn hl" href="#/lista">${ic('check')}Tomar lista</a></div>`);
+  if (!stats().n) {
+    setView(topbar('Estadísticas', '', backBtn('#/inicio')) + (hayArchivadas()
+      ? `<div class="empty"><h2>No hay clases activas</h2><p>Las clases anteriores están archivadas. Toma la primera lista del nuevo periodo, o inclúyelas desde Más → Ajustes del grupo.</p><a class="btn hl" href="#/lista">${ic('check')}Tomar lista</a></div>`
+      : `<div class="empty"><h2>Aún no hay clases</h2><p>Toma la primera lista para empezar a ver estadísticas.</p><a class="btn hl" href="#/lista">${ic('check')}Tomar lista</a></div>`));
     return;
   }
   const serv = curServicio(); const st = stats(serv); const {per} = st;
@@ -1747,7 +1851,7 @@ function viewStats() {
   const distintos = [...vinieron].filter(id => realIds.has(id));
   const activos = real.filter(s => per.get(s.id)?.estado !== 'inactivo').length || 1;
   const firstIdx = idxOf.get(cls[0].id);
-  const nuevos = real.filter(s => { const p = per.get(s.id); return p && p.first != null && p.first >= firstIdx; });
+  const nuevos = real.filter(s => { const p = per.get(s.id); return p && p.first != null && p.first >= firstIdx && !p.veterano; });
   const edadesVin = distintos.map(id => ageOf(DB.student(id))).filter(a => a);
   const edadProm = avg(edadesVin);
 
@@ -1817,6 +1921,7 @@ function viewStats() {
   </div></section>`;
 
   setView(topbar('Estadísticas', `${plural(cls.length, 'clase')}, ${fmtShort(cls[0].fecha)} a ${fmtShort(cls[cls.length - 1].fecha)}`, backBtn('#/inicio'), `<button class="icon-btn" data-act="exportXLSX" aria-label="Descargar Excel">${ic('download')}</button>`) + filters + `
+    ${hayArchivadas() ? `<p class="hint" style="margin:8px 2px 0">${incluirArch() ? 'Incluye las clases archivadas.' : `No incluye ${plural(data.classes.filter(c => c.archivada).length, 'clase archivada', 'clases archivadas')}.`} Se cambia en Más → Ajustes del grupo.</p>` : ''}
     <div class="kpis">
       <div class="kpi dark"><div class="k num">${dec(prom)}</div><div class="l">jóvenes por clase en promedio</div></div>
       <div class="kpi"><div class="k num">${pctTxt(Math.min(1, prom / activos))}</div><div class="l">del grupo activo (${activos}) viene a cada clase</div></div>
@@ -1936,7 +2041,8 @@ function studentsWorkbook() {
     ['Jóvenes registrados', real.length],
     ...ORDER.map(e => [`  ${ESTADOS[e].label}`, cnt[e]]),
     ['Sin celular del acudiente', real.filter(sinContacto).length],
-    ['Clases registradas', classes.length],
+    ['Clases incluidas en este archivo', classes.length],
+    ['Clases archivadas no incluidas', incluirArch() ? 0 : data.classes.filter(c => c.archivada).length],
     ['Promedio de asistentes (últimas 8 clases)', Math.round(avg(last8) * 10) / 10],
     ['Edad promedio del grupo', Math.round(avg(real.map(ageOf).filter(Boolean)) * 10) / 10],
     ['Asistencia promedio desde el ingreso', {p: Math.round(avg(real.map(s => per.get(s.id)).filter(p => p.relevant).map(p => p.pct)) * 1000) / 1000}],
@@ -2315,6 +2421,22 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet()
 /* =========================================================
    Acciones (delegación de eventos)
    ========================================================= */
+function archiveFlow(ids, on) {
+  if (!Auth.isSuper() || !ids.length) return;
+  if (!archOK()) {
+    openSheet(`<h2>Falta un paso en Supabase</h2><p class="muted" style="margin-top:8px">Para archivar clases, la base de datos necesita una columna nueva. Ejecuta el archivo <b>archivar.sql</b> en Supabase → SQL Editor y vuelve a abrir la app.</p><div class="actions"><button class="btn primary" data-act="closeSheet">Entendido</button></div>`);
+    return;
+  }
+  const n = ids.length;
+  const text = on
+    ? `No se borran: quedan guardadas con su asistencia, pero dejan de contar en las estadísticas, los porcentajes y los estados de los jóvenes${incluirArch() ? ' (aunque ahora mismo Ajustes está configurado para incluir las archivadas)' : ''}. Puedes desarchivarlas cuando quieras.`
+    : 'Vuelven a contar en las estadísticas, los porcentajes y los estados de los jóvenes.';
+  confirmSheet(on ? `¿Archivar ${plural(n, 'clase')}?` : `¿Desarchivar ${plural(n, 'clase')}?`, text, on ? `Archivar ${plural(n, 'clase')}` : `Desarchivar ${plural(n, 'clase')}`, async () => {
+    const k = await DB.setArchived(ids, on); ui.selC = null;
+    toast(on ? `${plural(k, 'clase archivada', 'clases archivadas')}` : `${plural(k, 'clase desarchivada', 'clases desarchivadas')}`);
+    if (on && n === 1 && location.hash.startsWith('#/clase/')) render(); else { if (!on) ui.cfiltro = 'activas'; render(); }
+  });
+}
 const ACT = {
   togglePw: el => { const i = el.parentElement.querySelector('input'); const show = i.type === 'password'; i.type = show ? 'text' : 'password'; el.innerHTML = ic(show ? 'eyeOff' : 'eye'); el.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña'); },
   changePw: () => changePwSheet(),
@@ -2371,6 +2493,29 @@ const ACT = {
     catch (e) { console.error(e); toast('No se pudo generar el Excel.'); }
     finally { if (el) el.removeAttribute('aria-busy'); }
   },
+  selJ: () => { if (!Auth.isSuper()) return; ui.selJ = new Set(); render(); },
+  selJoff: () => { ui.selJ = null; render(); },
+  pickJ: el => { const id = el.dataset.id; ui.selJ.has(id) ? ui.selJ.delete(id) : ui.selJ.add(id); drawStudents(stats()); },
+  selAllJ: () => { const vis = ui.visJ || []; const allOn = vis.length && vis.every(id => ui.selJ.has(id)); vis.forEach(id => allOn ? ui.selJ.delete(id) : ui.selJ.add(id)); drawStudents(stats()); },
+  delSelJ: () => {
+    if (!Auth.isSuper() || !ui.selJ || !ui.selJ.size) return;
+    const list = [...ui.selJ].map(DB.student).filter(Boolean); const n = list.length;
+    const names = list.slice(0, 6).map(s => esc(fullName(s))).join(', ') + (n > 6 ? ` y ${n - 6} más` : '');
+    const asis = data.classes.reduce((t, c) => t + c.asistentes.filter(id => ui.selJ.has(id)).length, 0);
+    confirmSheet(`¿Eliminar ${plural(n, 'joven', 'jóvenes')}?`, `${names}.<br><br>Se borrarán sus datos y ${plural(asis, 'asistencia')}, para todos los profesores. No se puede deshacer.`, `Eliminar ${plural(n, 'joven', 'jóvenes')}`, async () => {
+      await DB.deleteStudents(list.map(s => s.id)); ui.selJ = null; toast(`${plural(n, 'joven eliminado', 'jóvenes eliminados')}`); render();
+    }, true);
+  },
+  selC: () => { if (!Auth.isSuper()) return; ui.selC = new Set(); render(); },
+  selCoff: () => { ui.selC = null; render(); },
+  cfiltro: el => { ui.cfiltro = el.dataset.v; if (ui.selC) ui.selC = new Set(); render(); },
+  pickC: el => { const id = el.dataset.id; ui.selC.has(id) ? ui.selC.delete(id) : ui.selC.add(id); drawClasses(); },
+  selAllC: () => { const vis = ui.visC || []; const allOn = vis.length && vis.every(id => ui.selC.has(id)); vis.forEach(id => allOn ? ui.selC.delete(id) : ui.selC.add(id)); drawClasses(); },
+  selYearC: el => { const ids = (ui.visC || []).filter(id => DB.cls(id).fecha.startsWith(el.dataset.v)); const allOn = ids.every(id => ui.selC.has(id)); ids.forEach(id => allOn ? ui.selC.delete(id) : ui.selC.add(id)); drawClasses(); },
+  archSelC: () => archiveFlow([...(ui.selC || [])], true),
+  unarchSelC: () => archiveFlow([...(ui.selC || [])], false),
+  archOne: el => archiveFlow([el.dataset.id], true),
+  unarchOne: el => archiveFlow([el.dataset.id], false),
   usoRefresh: () => { ls.set('pulso.gh', null); usoState.gh = null; viewUso(true); },
   periodo: el => { ui.periodo = el.dataset.v; render(); },
   barTip: el => {
