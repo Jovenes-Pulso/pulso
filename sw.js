@@ -1,12 +1,12 @@
 /* Pulso: service worker. Cambia VERSION cada vez que publiques cambios. */
-const VERSION = 'pulso-v7';
+const VERSION = 'pulso-v8';
 const SHELL = ['./', './index.html', './config.js', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION && k !== 'pulso-fotos').map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 const networkFirst = (req, key) => fetch(req).then(r => {
   if (r.ok) { const copy = r.clone(); caches.open(VERSION).then(c => c.put(key || req, copy)); }
@@ -27,5 +27,13 @@ self.addEventListener('fetch', e => {
       return r;
     })));
   }
-  // Todo lo de Supabase (datos, sesión, tiempo real) va siempre directo a la red.
+  // Fotos de los jóvenes: cada archivo tiene nombre único, así que se guardan para verlas sin conexión
+  if (url.pathname.includes('/storage/v1/object/public/fotos/')) {
+    e.respondWith(caches.open('pulso-fotos').then(c => c.match(req).then(hit => hit || fetch(req).then(r => {
+      if (r.ok) c.put(req, r.clone());
+      return r;
+    }))));
+    return;
+  }
+  // Todo lo demás de Supabase (datos, sesión, tiempo real) va siempre directo a la red.
 });

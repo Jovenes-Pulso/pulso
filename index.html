@@ -119,6 +119,17 @@ select.input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w
 .av{position:relative}
 .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .av.lg{width:84px;height:84px;font-size:30px}
+.foto-pick{display:flex;align-items:center;gap:16px;margin:14px 0 4px}
+.foto-pick .av{width:92px;height:92px;font-size:32px}
+.foto-pick .av.empty{background:var(--surface-2,#E8ECF6)!important;color:var(--ink-3)}
+.foto-pick .av.empty svg{width:34px;height:34px}
+.foto-btns{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0}
+.foto-btns .row{display:flex;gap:8px;flex-wrap:wrap}
+.foto-btns .btn{min-height:42px;padding:0 14px;font-size:14.5px}
+.foto-btns input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.foto-btns .link{font-size:14px}
+.foto-pick.busy .av::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.6) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='9' fill='none' stroke='%23172042' stroke-width='2.5' stroke-dasharray='40 20'/%3E%3C/svg%3E") center/34px no-repeat;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .av.ph{background:transparent;box-shadow:inset 0 0 0 2px var(--line);border:0;color:var(--ink-3)}
 
 /* pulse strip */
@@ -435,10 +446,37 @@ function ageOf(s) {
   return s.edad ? Number(s.edad) : null;
 }
 const TINTS = ['#DCE3F7', '#E3DDF4', '#D9EEE6', '#F4E5D6', '#F2DCE3', '#DDEBF3'];
+// Foto pendiente de subir: se muestra la copia local mientras tanto
+function fotoSrc(url) {
+  if (!url) return '';
+  if (CLOUD && Sync.queue.length) { const op = Sync.queue.find(o => o.t === 'foto' && o.url === url); if (op) return op.data; }
+  return url;
+}
+// Recorta al centro (un poco hacia arriba, donde suele estar la cara) y reduce a 400 px en JPEG
+async function prepFoto(file) {
+  if (!file || !/^image\//.test(file.type || 'image/')) throw new Error('tipo');
+  let src, w, h;
+  try { src = await createImageBitmap(file, {imageOrientation: 'from-image'}); w = src.width; h = src.height; }
+  catch (e) {
+    src = await new Promise((ok, ko) => { const im = new Image(); im.onload = () => ok(im); im.onerror = ko; im.src = URL.createObjectURL(file); });
+    w = src.naturalWidth; h = src.naturalHeight;
+  }
+  const side = Math.min(w, h), S = Math.min(400, side);
+  const sx = (w - side) / 2, sy = (h - side) * 0.3;
+  const cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const cx = cv.getContext('2d'); cx.imageSmoothingQuality = 'high';
+  cx.drawImage(src, sx, sy, side, side, 0, 0, S, S);
+  if (src.close) src.close();
+  return cv.toDataURL('image/jpeg', 0.82);
+}
+const FOTO_BUCKET = 'fotos';
+const fotoPath = url => { const m = String(url || '').match(/\/storage\/v1\/object\/public\/fotos\/(.+)$/); return m ? decodeURIComponent(m[1]) : ''; };
+function dataToBlob(d) { const [h, b] = d.split(','); const bin = atob(b); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], {type: (h.match(/data:(.*?);/) || [])[1] || 'image/jpeg'}); }
 function avatar(s, cls = '') {
   if (s.placeholder) return `<div class="av ph ${cls}" aria-hidden="true"><span>?</span></div>`;
   let h = 0; for (const ch of s.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const img = s.foto ? `<img src="${esc(s.foto)}" alt="" loading="lazy" onerror="this.remove()">` : '';
+  const src = fotoSrc(s.foto);
+  const img = src ? `<img src="${esc(src)}" alt="" loading="lazy" onerror="this.remove()">` : '';
   return `<div class="av ${cls}" style="background:${TINTS[h % TINTS.length]}" aria-hidden="true"><span>${esc(initials(s))}</span>${img}</div>`;
 }
 function waLink(phone, text) {
@@ -477,6 +515,8 @@ const I = {
   phoneOff:'<path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/><path d="M3 3l18 18"/>',
   gauge:'<path d="M4.5 17a8 8 0 1 1 15 0"/><path d="m12 13 3.5-4"/><circle cx="12" cy="13" r="1.3"/>',
   archive:'<rect x="3.5" y="4" width="17" height="4.5" rx="1.2"/><path d="M5 8.5V18a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 18V8.5M10 12.5h4"/>',
+  camera:'<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.3l1.4-2h5.6l1.4 2h2.3A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5Z"/><circle cx="12" cy="13" r="3.5"/>',
+  image:'<rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m20 16-4.5-4.5L7 19"/>',
   select:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
   link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7L11.5 6.8"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5"/>',
 };
@@ -511,16 +551,31 @@ const DB = {
     if (i < 0) { s.creado = s.actualizado; data.students.push(s); } else data.students[i] = Object.assign(data.students[i], s);
     DB.persist(); Sync.push({t: 'upJ', rows: [J.toRow(DB.student(s.id))]}); return DB.student(s.id);
   },
+  // Guarda la foto nueva (data URL) o la quita (''). Devuelve el valor que queda en s.foto.
+  fotoValue(id, dataUrl) {
+    if (!dataUrl) return '';
+    if (!CLOUD) return dataUrl;
+    const path = `${id}-${Date.now().toString(36)}.jpg`;
+    const url = sb.storage.from(FOTO_BUCKET).getPublicUrl(path).data.publicUrl;
+    const prev = (DB.student(id) || {}).foto || '';
+    Sync.queue.push({t: 'foto', j: id, path, url, data: dataUrl, prev}); Sync.save();
+    return url;
+  },
   async deleteStudent(id) {
+    const gone = DB.student(id);
     data.students = data.students.filter(s => s.id !== id);
     data.classes.forEach(c => { c.asistentes = c.asistentes.filter(x => x !== id); });
+    const fp = fotoPath(gone && gone.foto);
     DB.persist(); Sync.push({t: 'delJ', ids: [id]});
+    if (fp) Sync.push({t: 'delF', paths: [fp]});
   },
   async deleteStudents(ids) {
     const del = new Set(ids);
+    const fps = data.students.filter(s => del.has(s.id)).map(s => fotoPath(s.foto)).filter(Boolean);
     data.students = data.students.filter(s => !del.has(s.id));
     data.classes.forEach(c => { c.asistentes = c.asistentes.filter(x => !del.has(x)); });
     DB.persist(); Sync.push({t: 'delJ', ids: [...del]});
+    if (fps.length) Sync.push({t: 'delF', paths: fps});
   },
   async setArchived(ids, on) {
     const set = new Set(ids); const changed = [];
@@ -748,6 +803,13 @@ async function runOp(op) {
       break;
     case 'upA': for (const ch of chunks(op.rows, 500)) await q(sb.from('asistencias').upsert(ch, {onConflict: 'clase_id,joven_id', ignoreDuplicates: true})); break;
     case 'set': await q(sb.from('ajustes').update(op.row).eq('id', 1)); break;
+    case 'foto': {
+      const {error} = await sb.storage.from(FOTO_BUCKET).upload(op.path, dataToBlob(op.data), {contentType: 'image/jpeg', cacheControl: '31536000', upsert: true});
+      if (error) throw Object.assign(new Error(error.message || 'No se pudo subir la foto'), {code: /bucket not found/i.test(error.message || '') ? 'NOBUCKET' : String(error.statusCode) === '403' ? '42501' : (error.code || ''), foto: true});
+      const old = fotoPath(op.prev); if (old) await sb.storage.from(FOTO_BUCKET).remove([old]).catch(() => {});
+      break;
+    }
+    case 'delF': await sb.storage.from(FOTO_BUCKET).remove(op.paths).catch(() => {}); break;
     case 'wipe':
       await q(sb.from('asistencias').delete().neq('clase_id', ''));
       await q(sb.from('clases').delete().neq('id', ''));
@@ -797,6 +859,8 @@ const Sync = {
   save() { try { localStorage.setItem(OKEY, JSON.stringify(Sync.queue)); } catch (e) {} },
   push(op) { if (!CLOUD) return; Sync.queue.push(op); Sync.save(); Sync.ui(); Sync.flush(); },
   errText(e) {
+    if (e.code === 'NOBUCKET') return 'La foto no se guardó: falta ejecutar fotos.sql en Supabase.';
+    if (e.foto) return 'La foto no se pudo subir: ' + (e.code === '42501' ? 'falta ejecutar fotos.sql en Supabase.' : (e.message || 'error desconocido'));
     if (e.code === '42501') return 'No tienes permiso para ese cambio. Se deshizo.';
     if (e.code === '23503') return 'Un registro ya no existía. Se actualizaron los datos.';
     if (e.code === '23505') return 'Ese registro ya existía. Se actualizaron los datos.';
@@ -818,7 +882,9 @@ const Sync = {
             Sync.state = 'auth'; break;
           }
           console.error('Pulso: cambio rechazado', op.t, e);
-          Sync.queue.shift(); Sync.save(); resync = true; toast(Sync.errText(e));
+          Sync.queue.shift();
+          if (op.t === 'foto') Sync.queue.forEach(o => { if (o.t === 'upJ') o.rows.forEach(r => { if (r.id === op.j && r.foto === op.url) r.foto = op.prev || null; }); });
+          Sync.save(); resync = true; toast(Sync.errText(e));
         }
       }
     } catch (e) { Sync.state = isNetwork(e) ? 'offline' : Sync.state; }
@@ -1438,6 +1504,16 @@ function studentSheet(id, opts = {}) {
   openSheet(`
     <h2>${id ? 'Editar datos' : 'Nuevo joven'}</h2>
     <form id="sform" autocomplete="off">
+      <div class="foto-pick" id="fpick">
+        <div id="fprev"></div>
+        <div class="foto-btns">
+          <div class="row">
+            <label class="btn ghost">${ic('camera')}Tomar foto<input type="file" accept="image/*" capture="environment" data-foto></label>
+            <label class="btn ghost">${ic('image')}Galería<input type="file" accept="image/*" data-foto></label>
+          </div>
+          <button type="button" class="link" id="fquitar" hidden>Quitar foto</button>
+        </div>
+      </div>
       <div class="grid2">
         <label class="field"><span>Nombres</span><input class="input" name="nombres" value="${esc(s.nombres)}" required autocapitalize="words"></label>
         <label class="field"><span>Apellidos</span><input class="input" name="apellidos" value="${esc(s.apellidos)}" autocapitalize="words"></label>
@@ -1454,12 +1530,42 @@ function studentSheet(id, opts = {}) {
       <div class="actions"><button type="button" class="btn ghost" data-act="closeSheet">Cancelar</button><button class="btn primary" type="submit">${id ? 'Guardar cambios' : (opts.classId ? 'Agregar y marcar presente' : 'Agregar joven')}</button></div>
       ${id && Auth.isSuper() ? `<button type="button" class="btn danger block" style="margin-top:12px" data-act="deleteStudent" data-id="${id}">${ic('trash')}Eliminar joven</button>` : ''}
     </form>`, sh => {
+    // foto: null = sin cambios, '' = quitar, data URL = nueva
+    let foto = null;
+    const pick = sh.querySelector('#fpick');
+    const drawFoto = () => {
+      const cur = foto === null ? fotoSrc(s.foto) : foto;
+      const nm = sh.querySelector('[name=nombres]').value.trim(), ap = sh.querySelector('[name=apellidos]').value.trim();
+      sh.querySelector('#fprev').innerHTML = cur
+        ? `<div class="av"><img src="${esc(cur)}" alt="Foto de ${esc(nm || 'el joven')}"></div>`
+        : (nm ? avatar({id: id || 'nuevo', nombres: nm, apellidos: ap}) : `<div class="av empty" aria-hidden="true">${ic('camera')}</div>`);
+      sh.querySelector('#fquitar').hidden = !cur;
+    };
+    drawFoto();
+    sh.querySelector('[name=nombres]').addEventListener('input', () => { if (!(foto === null ? s.foto : foto)) drawFoto(); });
+    sh.querySelectorAll('[data-foto]').forEach(inp => inp.addEventListener('change', async () => {
+      const file = inp.files && inp.files[0]; inp.value = '';
+      if (!file) return;
+      pick.classList.add('busy');
+      try { foto = await prepFoto(file); drawFoto(); }
+      catch (e) { toast('No se pudo leer esa imagen. Prueba con otra foto.'); }
+      finally { pick.classList.remove('busy'); }
+    }));
+    sh.querySelector('#fquitar').addEventListener('click', () => { foto = ''; drawFoto(); });
     sh.querySelector('#sform').addEventListener('submit', async e => {
       e.preventDefault();
+      if (pick.classList.contains('busy')) return;
       const f = Object.fromEntries(new FormData(e.target));
-      Object.keys(f).forEach(k => f[k] = String(f[k]).trim());
+      delete f[''];
+      Object.keys(f).forEach(k => { if (typeof f[k] !== 'string') delete f[k]; else f[k] = f[k].trim(); });
       if (!f.nombres) return;
-      const saved = await DB.saveStudent(Object.assign(id ? {id} : {}, f, {placeholder: false}));
+      const sid = id || uid();
+      if (foto !== null) {
+        const old = id ? fotoPath(s.foto) : '';
+        f.foto = DB.fotoValue(sid, foto);
+        if (foto === '' && old && CLOUD) Sync.queue.push({t: 'delF', paths: [old]});
+      }
+      const saved = await DB.saveStudent(Object.assign({id: sid}, f, {placeholder: false}));
       if (opts.classId) await DB.setAttendance(opts.classId, saved.id, true);
       closeSheet();
       toast(id ? 'Cambios guardados' : (opts.classId ? `${shortName(saved)} agregado y presente` : `${shortName(saved)} agregado`));
