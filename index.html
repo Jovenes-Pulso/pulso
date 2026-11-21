@@ -119,6 +119,12 @@ select.input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w
 .av{position:relative}
 .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .av.lg{width:84px;height:84px;font-size:30px}
+.perms{border:1px solid var(--line);border-radius:16px;padding:12px 14px 6px;margin:14px 0 4px}
+.perms legend{font-weight:600;font-size:14px;color:var(--ink-2,#46507A);padding:0 6px}
+.perm{display:flex;gap:12px;align-items:flex-start;padding:8px 0;cursor:pointer}
+.perm input{width:22px;height:22px;margin-top:2px;accent-color:var(--ink);flex:none}
+.perm span{display:flex;flex-direction:column;gap:2px}
+.perm small{color:var(--ink-3);font-size:13px;line-height:1.35}
 .foto-pick{display:flex;align-items:center;gap:16px;margin:14px 0 4px}
 .foto-pick .av{width:92px;height:92px;font-size:32px}
 .foto-pick .av.empty{background:var(--surface-2,#E8ECF6)!important;color:var(--ink-3)}
@@ -659,6 +665,10 @@ const AUTH_CFG = {intentos: 5, bloqueoSeg: 30, minClave: 6};
 const SKEY = 'pulso.session', LKEY = 'pulso.lock', UKEY = 'pulso.users';
 const ROLES = {superadmin: 'Super administrador', profesor: 'Profesor'};
 const ROLES_CORTO = {superadmin: 'Super admin', profesor: 'Profesor'};
+// Permisos extra que el super admin puede dar a cada profesor
+const PERMISOS = {eliminar: 'Eliminar jóvenes y clases', archivar: 'Archivar y desarchivar clases'};
+const permList = u => (u && Array.isArray(u.permisos) ? u.permisos : []).filter(x => PERMISOS[x]);
+const permOK = () => !CLOUD || ls.get('pulso.permOK') === true;
 const mem = {};
 const ls = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : (mem[k] ?? null); } catch (e) { return mem[k] ?? null; } },
@@ -699,6 +709,10 @@ const LocalUsers = {
     if (rol && ROLES[rol]) u.rol = rol;
     ls.set(UKEY, list); return u;
   },
+  async setPermisos(id, permisos) {
+    const list = LocalUsers.all(), u = list.find(x => x.id === id); if (!u) throw new Error('Esta cuenta ya no existe.');
+    u.permisos = [...new Set(permisos.filter(x => PERMISOS[x]))]; ls.set(UKEY, list); return u;
+  },
   async resetPassword(id, clave) {
     const list = LocalUsers.all(), u = list.find(x => x.id === id); if (!u) throw new Error('Esta cuenta ya no existe.');
     if (String(clave).length < AUTH_CFG.minClave) throw new Error(`La contraseña debe tener al menos ${AUTH_CFG.minClave} caracteres.`);
@@ -717,9 +731,10 @@ const LocalAuth = {
     const s = ls.get(SKEY); if (!s) return null;
     const u = LocalUsers.get(s.uid);
     if (!u) { ls.set(SKEY, null); ls.set('pulso.kicked', true); return null; }
-    return {uid: u.id, usuario: u.usuario, nombre: u.nombre, rol: u.rol, desde: s.desde};
+    return {uid: u.id, usuario: u.usuario, nombre: u.nombre, rol: u.rol, permisos: permList(u), desde: s.desde};
   },
   isSuper: () => LocalAuth.session()?.rol === 'superadmin',
+  can: p => { const m = LocalAuth.session(); return !!m && (m.rol === 'superadmin' || permList(m).includes(p)); },
   lockLeft() { const l = ls.get(LKEY); return l && l.until > Date.now() ? Math.ceil((l.until - Date.now()) / 1000) : 0; },
   async signIn(usuario, clave) {
     if (LocalAuth.lockLeft()) return {ok: false, lock: LocalAuth.lockLeft()};
@@ -898,14 +913,19 @@ const Sync = {
     try {
       const [js, cs, as, aj, ps] = await Promise.all([
         fetchAll('jovenes', '*', ['id']), fetchAll('clases', '*', ['id']), fetchAll('asistencias', 'clase_id,joven_id', ['clase_id', 'joven_id']),
-        sb.from('ajustes').select('*').eq('id', 1).maybeSingle(), sb.from('perfiles').select('id,usuario,nombre,rol,creado').order('nombre'),
+        sb.from('ajustes').select('*').eq('id', 1).maybeSingle(), sb.from('perfiles').select('*').order('nombre'),
       ]);
       if (aj.error) throw aj.error; if (ps.error) throw ps.error;
       if (aj.data) ls.set('pulso.archOK', 'incluir_archivadas' in aj.data && (!cs.length || 'archivada' in cs[0]));
       const me = Auth.session(); if (!me) return;
       const mine = (ps.data || []).find(p => p.id === me.uid);
       if (!mine) { await CloudAuth.kick(); return; }
-      if (mine.nombre !== me.nombre || mine.rol !== me.rol) { CloudAuth.me = {uid: mine.id, usuario: mine.usuario, nombre: mine.nombre, rol: mine.rol}; ls.set(ME_KEY, CloudAuth.me); }
+      ls.set('pulso.permOK', 'permisos' in mine);
+      const pm = permList(mine), permCambio = pm.join() !== permList(me).join();
+      if (mine.nombre !== me.nombre || mine.rol !== me.rol || permCambio) {
+        CloudAuth.me = {uid: mine.id, usuario: mine.usuario, nombre: mine.nombre, rol: mine.rol, permisos: pm}; ls.set(ME_KEY, CloudAuth.me);
+        if (permCambio && mine.rol !== 'superadmin') { ui.selJ = null; ui.selC = null; setTimeout(() => toast('El administrador cambió tus permisos'), 400); }
+      }
       CloudUsers.list = ps.data || []; ls.set(UCACHE, CloudUsers.list);
       const byC = new Map(); as.forEach(a => { if (!byC.has(a.clase_id)) byC.set(a.clase_id, []); byC.get(a.clase_id).push(a.joven_id); });
       const d = {version: 1, students: js.map(J.fromRow), classes: cs.map(r => Object.assign(C.fromRow(r), {asistentes: byC.get(r.id) || []})),
@@ -977,6 +997,7 @@ const CloudAuth = {
   email: u => `${u}@${CFG.dominio}`,
   session: () => CloudAuth.me,
   isSuper: () => CloudAuth.me?.rol === 'superadmin',
+  can: p => { const m = CloudAuth.me; return !!m && (m.rol === 'superadmin' || permList(m).includes(p)); },
   lockLeft: () => LocalAuth.lockLeft(),
   async init() {
     const cached = ls.get(ME_KEY);
@@ -991,10 +1012,11 @@ const CloudAuth = {
     else CloudAuth.me = null;
   },
   async loadProfile(id) {
-    const {data: p, error} = await sb.from('perfiles').select('id, usuario, nombre, rol').eq('id', id).maybeSingle();
+    const {data: p, error} = await sb.from('perfiles').select('*').eq('id', id).maybeSingle();
     if (error) throw error;
     if (!p) { await CloudAuth.kick(); return null; }
-    CloudAuth.me = {uid: p.id, usuario: p.usuario, nombre: p.nombre, rol: p.rol}; ls.set(ME_KEY, CloudAuth.me);
+    ls.set('pulso.permOK', 'permisos' in p);
+    CloudAuth.me = {uid: p.id, usuario: p.usuario, nombre: p.nombre, rol: p.rol, permisos: permList(p)}; ls.set(ME_KEY, CloudAuth.me);
     return p;
   },
   async signIn(usuario, clave) {
@@ -1051,7 +1073,7 @@ const CloudUsers = {
     return r;
   },
   async refresh() {
-    const {data: ps, error} = await sb.from('perfiles').select('id,usuario,nombre,rol,creado').order('nombre');
+    const {data: ps, error} = await sb.from('perfiles').select('*').order('nombre');
     if (!error) { CloudUsers.list = ps || []; ls.set(UCACHE, CloudUsers.list); }
   },
   async create({usuario, nombre, rol, clave}) {
@@ -1068,6 +1090,16 @@ const CloudUsers = {
     if (CloudAuth.me && id === CloudAuth.me.uid) await CloudAuth.loadProfile(id).catch(() => {});
   },
   async resetPassword(id, clave) { await CloudUsers.call({accion: 'restablecer', id, clave}); },
+  async setPermisos(id, permisos) {
+    if (!sb) throw new Error('Sin conexión. Necesitas internet para cambiar permisos.');
+    const {error} = await sb.rpc('asignar_permisos', {p_id: id, p_permisos: permisos.filter(x => PERMISOS[x])});
+    if (error) {
+      if (isNetwork(error)) throw new Error('Sin conexión. Necesitas internet para cambiar permisos.');
+      if (error.code === 'PGRST202' || /asignar_permisos/.test(error.message || '')) throw new Error('Falta ejecutar permisos-profesores.sql en Supabase.');
+      throw new Error(error.message || 'No se pudieron guardar los permisos.');
+    }
+    await CloudUsers.refresh();
+  },
   async remove(id) { await CloudUsers.call({accion: 'eliminar', id}); await CloudUsers.refresh(); },
 };
 
@@ -1391,7 +1423,7 @@ function viewStudents() {
   const sel = ui.selJ;
   const head = sel
     ? topbar('<span id="seltitle">Selecciona jóvenes</span>', 'Toca cada joven que quieras eliminar', `<button class="icon-btn" data-act="selJoff" aria-label="Cancelar selección">${ic('x')}</button>`)
-    : topbar('Jóvenes', plural(data.students.filter(s => !s.placeholder).length, 'registrado'), '', `${Auth.isSuper() ? `<button class="icon-btn" data-act="selJ" aria-label="Seleccionar varios">${ic('select')}</button>` : ''}<button class="icon-btn" data-act="exportXLSX" aria-label="Descargar Excel">${ic('download')}</button><button class="icon-btn solid" data-act="newStudent" aria-label="Agregar joven">${ic('plus')}</button>`);
+    : topbar('Jóvenes', plural(data.students.filter(s => !s.placeholder).length, 'registrado'), '', `${Auth.can('eliminar') ? `<button class="icon-btn" data-act="selJ" aria-label="Seleccionar varios">${ic('select')}</button>` : ''}<button class="icon-btn" data-act="exportXLSX" aria-label="Descargar Excel">${ic('download')}</button><button class="icon-btn solid" data-act="newStudent" aria-label="Agregar joven">${ic('plus')}</button>`);
   setView(head + `
     <div class="search"><label class="sr" for="q">Buscar joven</label>${ic('search')}<input id="q" class="input" type="search" placeholder="Buscar por nombre o acudiente" value="${esc(ui.q)}" autocomplete="off"></div>
     <div class="chips" id="fchips" style="margin-top:10px"></div>
@@ -1528,7 +1560,7 @@ function studentSheet(id, opts = {}) {
       <label class="field"><span>Fecha de ingreso al grupo</span><input class="input" type="date" name="fechaIngreso" value="${esc(s.fechaIngreso || '')}"></label>
       <label class="field"><span>Notas</span><textarea class="input" name="notas" placeholder="Colegio, intereses, motivos de oración, alergias">${esc(s.notas || '')}</textarea></label>
       <div class="actions"><button type="button" class="btn ghost" data-act="closeSheet">Cancelar</button><button class="btn primary" type="submit">${id ? 'Guardar cambios' : (opts.classId ? 'Agregar y marcar presente' : 'Agregar joven')}</button></div>
-      ${id && Auth.isSuper() ? `<button type="button" class="btn danger block" style="margin-top:12px" data-act="deleteStudent" data-id="${id}">${ic('trash')}Eliminar joven</button>` : ''}
+      ${id && Auth.can('eliminar') ? `<button type="button" class="btn danger block" style="margin-top:12px" data-act="deleteStudent" data-id="${id}">${ic('trash')}Eliminar joven</button>` : ''}
     </form>`, sh => {
     // foto: null = sin cambios, '' = quitar, data URL = nueva
     let foto = null;
@@ -1652,7 +1684,7 @@ function classRow(c, sel) {
     : `<a class="item" href="#/clase/${c.id}">${inner}</a>`;
 }
 function viewClasses() {
-  const sup = Auth.isSuper(), sel = ui.selC;
+  const sup = Auth.can('archivar'), sel = ui.selC;
   const nArch = data.classes.filter(c => c.archivada).length, nAct = data.classes.length - nArch;
   if (!nArch && ui.cfiltro === 'archivadas') ui.cfiltro = 'activas';
   const archView = ui.cfiltro === 'archivadas';
@@ -1710,7 +1742,7 @@ function viewClass(id) {
     </div>
     ${c.archivada ? `<div class="arch-note">${ic('archive')}<span><b>Clase archivada.</b> ${incluirArch() ? 'Por ahora sí cuenta en las estadísticas, porque en Ajustes elegiste incluir las archivadas.' : 'No cuenta en las estadísticas.'}</span></div>` : ''}
     <a class="btn hl block" style="margin-top:12px" href="#/lista/${c.id}">${ic('check')}Editar asistencia</a>
-    ${Auth.isSuper() ? `<button class="btn ghost block" style="margin-top:10px" data-act="${c.archivada ? 'unarchOne' : 'archOne'}" data-id="${c.id}">${ic('archive')}${c.archivada ? 'Desarchivar clase' : 'Archivar clase'}</button>` : ''}
+    ${Auth.can('archivar') ? `<button class="btn ghost block" style="margin-top:10px" data-act="${c.archivada ? 'unarchOne' : 'archOne'}" data-id="${c.id}">${ic('archive')}${c.archivada ? 'Desarchivar clase' : 'Archivar clase'}</button>` : ''}
     ${newHere.length ? `<section class="section"><h2>Primera vez</h2><div class="people" style="margin-top:10px">${newHere.map(personChip).join('')}</div></section>` : ''}
     ${missing.length ? `<section class="section"><h2>Faltaron de los que suelen venir</h2><div class="people" style="margin-top:10px">${missing.slice(0, 12).map(personChip).join('')}</div></section>` : ''}
     ${c.registradoPor ? `<p class="hint" style="margin-top:10px">Lista tomada por ${esc(c.registradoPor)}.</p>` : ''}
@@ -1722,7 +1754,7 @@ function classSheet(id) {
   openSheet(`<h2>Editar clase</h2><form id="ceform" autocomplete="off" style="margin-top:14px">${classFields(c)}
     <label class="field"><span>Notas</span><textarea class="input" name="notas" placeholder="Actividad, versículo, observaciones">${esc(c.notas || '')}</textarea></label>
     <div class="actions"><button type="button" class="btn ghost" data-act="closeSheet">Cancelar</button><button class="btn primary" type="submit">Guardar cambios</button></div>
-    ${Auth.isSuper() ? `<button type="button" class="btn danger block" style="margin-top:12px" data-act="deleteClass" data-id="${id}">${ic('trash')}Eliminar clase</button>` : ''}</form>`, sh => {
+    ${Auth.can('eliminar') ? `<button type="button" class="btn danger block" style="margin-top:12px" data-act="deleteClass" data-id="${id}">${ic('trash')}Eliminar clase</button>` : ''}</form>`, sh => {
     sh.querySelector('#ceform').addEventListener('submit', async e => {
       e.preventDefault();
       const f = Object.fromEntries(new FormData(e.target)); Object.keys(f).forEach(k => f[k] = String(f[k]).trim());
@@ -1814,7 +1846,7 @@ function viewTeachers() {
       const ini = u.nombre.split(/\s+/).map(x => x[0]).slice(0, 2).join('').toUpperCase();
       const n = tomadas(u.id);
       return `<button class="item" data-act="editTeacher" data-id="${u.id}"><div class="av" aria-hidden="true" style="${u.rol === 'superadmin' ? 'background:var(--hl)' : ''}"><span>${esc(ini)}</span></div>
-        <div class="body"><div class="name">${esc(u.nombre)}${u.id === me.uid ? ' <span class="muted" style="font-weight:500">(tú)</span>' : ''}</div><div class="meta">Usuario: ${esc(u.usuario)}${n ? `. ${plural(n, 'lista tomada', 'listas tomadas')}` : ''}</div></div>
+        <div class="body"><div class="name">${esc(u.nombre)}${u.id === me.uid ? ' <span class="muted" style="font-weight:500">(tú)</span>' : ''}</div><div class="meta">Usuario: ${esc(u.usuario)}${n ? `. ${plural(n, 'lista tomada', 'listas tomadas')}` : ''}</div>${u.rol !== 'superadmin' && permList(u).length ? `<div class="meta" style="margin-top:2px">Puede ${permList(u).map(x => x === 'eliminar' ? 'eliminar' : 'archivar').join(' y ')}</div>` : ''}</div>
         <div class="end"><span class="badge b-${u.rol}">${ROLES_CORTO[u.rol]}</span></div></button>`;
     }).join('')}</div>
     <button class="btn hl block" style="margin-top:14px" data-act="newTeacher">${ic('plus')}Crear cuenta de profesor</button>`);
@@ -1833,6 +1865,11 @@ function teacherSheet(id) {
         <option value="profesor" ${u && u.rol === 'profesor' || !u ? 'selected' : ''}>Profesor: toma lista, crea y edita</option>
         <option value="superadmin" ${u && u.rol === 'superadmin' ? 'selected' : ''}>Super administrador: además gestiona cuentas y borra</option>
       </select></label>
+      <fieldset class="perms" id="perms" ${u && u.rol === 'superadmin' ? 'hidden' : ''}>
+        <legend>Permisos extra de este profesor</legend>
+        ${Object.entries(PERMISOS).map(([k, t]) => `<label class="perm"><input type="checkbox" name="perm" value="${k}" ${permList(u).includes(k) ? 'checked' : ''}><span><b>${t}</b><small>${k === 'eliminar' ? 'Uno por uno o varios a la vez. No se puede deshacer.' : 'Las clases archivadas dejan de contar en las estadísticas.'}</small></span></label>`).join('')}
+        ${permOK() ? '' : '<p class="hint" style="color:var(--danger,#B3261E)">Para usar estos permisos, ejecuta permisos-profesores.sql en Supabase.</p>'}
+      </fieldset>
       ${u ? '' : `<label class="field"><span>Contraseña temporal</span><span class="gen"><input class="input" name="clave" value="${tempPassword()}" autocapitalize="none" spellcheck="false"><button type="button" class="btn ghost" data-act="regen" aria-label="Generar otra">${ic('refresh')}</button></span></label>
       <p class="hint">Se la envías y la cambia desde Más al entrar.</p>`}
       <p class="err" id="terr" role="alert"></p>
@@ -1841,6 +1878,13 @@ function teacherSheet(id) {
       <button type="button" class="btn danger block" style="margin-top:10px" data-act="deleteTeacher" data-id="${u.id}">${ic('trash')}Eliminar cuenta</button>` : ''}
     </form>`, sh => {
     const f = sh.querySelector('#tform');
+    f.rol.addEventListener('change', () => { sh.querySelector('#perms').hidden = f.rol.value === 'superadmin'; });
+    const permsSel = () => [...f.querySelectorAll('[name=perm]:checked')].map(x => x.value);
+    const savePerms = async (uid0, rol) => {
+      const want = rol === 'superadmin' ? [] : permsSel(), had = permList(Users.get(uid0));
+      if (want.slice().sort().join() === had.slice().sort().join()) return;
+      await Users.setPermisos(uid0, want);
+    };
     if (!u) {
       let touched = false;
       f.usuario.addEventListener('input', () => { touched = true; });
@@ -1850,8 +1894,16 @@ function teacherSheet(id) {
     f.addEventListener('submit', async e => {
       e.preventDefault();
       try {
-        if (u) { await Users.update(u.id, {nombre: f.nombre.value, rol: f.rol.disabled ? u.rol : f.rol.value}); closeSheet(); toast('Cambios guardados'); render(); }
-        else { const nu = await Users.create({nombre: f.nombre.value, usuario: f.usuario.value, rol: f.rol.value, clave: f.clave.value}); credSheet(nu, f.clave.value, 'Cuenta creada'); render(); }
+        if (u) {
+          const rol = f.rol.disabled ? u.rol : f.rol.value;
+          await Users.update(u.id, {nombre: f.nombre.value, rol});
+          await savePerms(u.id, rol);
+          closeSheet(); toast('Cambios guardados'); render();
+        } else {
+          const nu = await Users.create({nombre: f.nombre.value, usuario: f.usuario.value, rol: f.rol.value, clave: f.clave.value});
+          try { await savePerms(nu.id, f.rol.value); } catch (pe) { toast('Cuenta creada, pero sin permisos extra: ' + pe.message); }
+          credSheet(nu, f.clave.value, 'Cuenta creada'); render();
+        }
       } catch (err) { sh.querySelector('#terr').textContent = err.message; }
     });
   });
@@ -2528,7 +2580,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet()
    Acciones (delegación de eventos)
    ========================================================= */
 function archiveFlow(ids, on) {
-  if (!Auth.isSuper() || !ids.length) return;
+  if (!Auth.can('archivar') || !ids.length) return;
   if (!archOK()) {
     openSheet(`<h2>Falta un paso en Supabase</h2><p class="muted" style="margin-top:8px">Para archivar clases, la base de datos necesita una columna nueva. Ejecuta el archivo <b>archivar.sql</b> en Supabase → SQL Editor y vuelve a abrir la app.</p><div class="actions"><button class="btn primary" data-act="closeSheet">Entendido</button></div>`);
     return;
@@ -2581,8 +2633,8 @@ const ACT = {
     await DB.setAttendance(cid, el.dataset.id, on);
     $('#pcount').textContent = DB.cls(cid).asistentes.length;
   },
-  deleteStudent: el => { if (!Auth.isSuper()) return;  const s = DB.student(el.dataset.id); confirmSheet(`¿Eliminar a ${esc(fullName(s))}?`, 'Se borrarán sus datos y sus asistencias de todas las clases. No se puede deshacer.', 'Eliminar joven', async () => { await DB.deleteStudent(s.id); toast('Joven eliminado'); location.hash = '#/jovenes'; }, true); },
-  deleteClass: el => { if (!Auth.isSuper()) return;  const c = DB.cls(el.dataset.id); confirmSheet('¿Eliminar esta clase?', `Se borrará la clase del ${fmtLong(c.fecha)} con sus ${c.asistentes.length} asistencias. No se puede deshacer.`, 'Eliminar clase', async () => { await DB.deleteClass(c.id); toast('Clase eliminada'); location.hash = '#/clases'; }, true); },
+  deleteStudent: el => { if (!Auth.can('eliminar')) return;  const s = DB.student(el.dataset.id); confirmSheet(`¿Eliminar a ${esc(fullName(s))}?`, 'Se borrarán sus datos y sus asistencias de todas las clases. No se puede deshacer.', 'Eliminar joven', async () => { await DB.deleteStudent(s.id); toast('Joven eliminado'); location.hash = '#/jovenes'; }, true); },
+  deleteClass: el => { if (!Auth.can('eliminar')) return;  const c = DB.cls(el.dataset.id); confirmSheet('¿Eliminar esta clase?', `Se borrará la clase del ${fmtLong(c.fecha)} con sus ${c.asistentes.length} asistencias. No se puede deshacer.`, 'Eliminar clase', async () => { await DB.deleteClass(c.id); toast('Clase eliminada'); location.hash = '#/clases'; }, true); },
   merge: async el => { const to = $('#mergeTo').value; if (!to) { toast('Elige el joven correcto'); return; } await DB.mergeStudent(el.dataset.id, to); toast('Asistencias vinculadas'); location.hash = '#/joven/' + to; },
   doImport: async () => { if (!Auth.isSuper()) return;
     const plan = buildImport(); if (!plan) return;
@@ -2599,12 +2651,12 @@ const ACT = {
     catch (e) { console.error(e); toast('No se pudo generar el Excel.'); }
     finally { if (el) el.removeAttribute('aria-busy'); }
   },
-  selJ: () => { if (!Auth.isSuper()) return; ui.selJ = new Set(); render(); },
+  selJ: () => { if (!Auth.can('eliminar')) return; ui.selJ = new Set(); render(); },
   selJoff: () => { ui.selJ = null; render(); },
   pickJ: el => { const id = el.dataset.id; ui.selJ.has(id) ? ui.selJ.delete(id) : ui.selJ.add(id); drawStudents(stats()); },
   selAllJ: () => { const vis = ui.visJ || []; const allOn = vis.length && vis.every(id => ui.selJ.has(id)); vis.forEach(id => allOn ? ui.selJ.delete(id) : ui.selJ.add(id)); drawStudents(stats()); },
   delSelJ: () => {
-    if (!Auth.isSuper() || !ui.selJ || !ui.selJ.size) return;
+    if (!Auth.can('eliminar') || !ui.selJ || !ui.selJ.size) return;
     const list = [...ui.selJ].map(DB.student).filter(Boolean); const n = list.length;
     const names = list.slice(0, 6).map(s => esc(fullName(s))).join(', ') + (n > 6 ? ` y ${n - 6} más` : '');
     const asis = data.classes.reduce((t, c) => t + c.asistentes.filter(id => ui.selJ.has(id)).length, 0);
@@ -2612,7 +2664,7 @@ const ACT = {
       await DB.deleteStudents(list.map(s => s.id)); ui.selJ = null; toast(`${plural(n, 'joven eliminado', 'jóvenes eliminados')}`); render();
     }, true);
   },
-  selC: () => { if (!Auth.isSuper()) return; ui.selC = new Set(); render(); },
+  selC: () => { if (!Auth.can('archivar')) return; ui.selC = new Set(); render(); },
   selCoff: () => { ui.selC = null; render(); },
   cfiltro: el => { ui.cfiltro = el.dataset.v; if (ui.selC) ui.selC = new Set(); render(); },
   pickC: el => { const id = el.dataset.id; ui.selC.has(id) ? ui.selC.delete(id) : ui.selC.add(id); drawClasses(); },
