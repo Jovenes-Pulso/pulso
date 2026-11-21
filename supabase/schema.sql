@@ -119,6 +119,18 @@ create policy ajustes_ver    on public.ajustes for select to authenticated using
 create policy ajustes_editar on public.ajustes for update to authenticated using (public.es_superadmin()) with check (public.es_superadmin());
 
 
+-- ---------- Permisos de acceso para la app ----------
+-- Algunos proyectos nuevos no dan acceso automático a tablas nuevas.
+grant usage on schema public to anon, authenticated, service_role;
+grant select                         on public.perfiles    to authenticated;
+grant select, insert, update, delete on public.jovenes     to authenticated;
+grant select, insert, update, delete on public.clases      to authenticated;
+grant select, insert, update, delete on public.asistencias to authenticated;
+grant select, update                 on public.ajustes     to authenticated;
+grant all on public.perfiles, public.jovenes, public.clases, public.asistencias, public.ajustes to service_role;
+grant execute on function public.es_miembro()    to authenticated, service_role;
+grant execute on function public.es_superadmin() to authenticated, service_role;
+
 -- ---------- Tiempo real ----------
 -- Para que la asistencia que marca un profesor aparezca sola en el
 -- celular de otro, Supabase debe publicar los cambios de estas tablas.

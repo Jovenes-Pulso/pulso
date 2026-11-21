@@ -299,7 +299,9 @@ details[open] summary svg{transform:rotate(90deg)}
 .stats-link .ic2 svg{width:22px;height:22px}
 .stats-link small{display:block;font-weight:400;color:var(--ink-2);font-size:13.5px}
 
-.syncbar{position:fixed;top:calc(var(--safe-t) + 8px);left:50%;transform:translateX(-50%);z-index:25;background:var(--ink);color:#fff;font-size:13px;font-weight:500;padding:7px 14px;border-radius:999px;box-shadow:0 4px 16px rgba(23,32,66,.2);max-width:calc(100% - 24px);text-align:center}
+.syncbar{position:fixed;bottom:calc(var(--tab-h) + var(--safe-b) + 12px);left:50%;transform:translateX(-50%);z-index:25;background:var(--ink);color:#fff;font-size:13px;font-weight:500;padding:7px 14px;border-radius:999px;box-shadow:0 4px 16px rgba(23,32,66,.2);max-width:calc(100% - 24px);text-align:center}
+body.locked .syncbar{bottom:calc(var(--safe-b) + 16px)}
+body:has(#syncbar) .toast{bottom:calc(var(--tab-h) + var(--safe-b) + 62px)}
 .syncbar button{color:var(--hl);font-weight:700;margin-left:6px;text-decoration:underline}
 
 /* ---------- uso de servicios ---------- */
@@ -891,15 +893,16 @@ const CloudAuth = {
   },
   async signIn(usuario, clave) {
     if (LocalAuth.lockLeft()) return {ok: false, lock: LocalAuth.lockLeft()};
-    if (!sb) return {ok: false, offline: true};
+    if (!sb) return {ok: false, noLib: true};
     const name = cleanUser(usuario);
     if (!validUser(name)) return LocalAuth.fail();
     let res;
-    try { res = await sb.auth.signInWithPassword({email: CloudAuth.email(name), password: clave}); } catch (e) { return {ok: false, offline: true}; }
-    if (res.error) return isNetwork(res.error) ? {ok: false, offline: true} : LocalAuth.fail();
+    try { res = await sb.auth.signInWithPassword({email: CloudAuth.email(name), password: clave}); } catch (e) { console.error('Pulso: ingreso', e); return isNetwork(e) ? {ok: false, offline: true} : {ok: false, dbError: String(e.message || e)}; }
+    if (res.error) { console.error('Pulso: ingreso', res.error); if (isNetwork(res.error)) return {ok: false, offline: true}; if (/api key|apikey/i.test(res.error.message || '')) return {ok: false, dbError: 'La llave de config.js no es válida para este proyecto (' + res.error.message + ').'}; return LocalAuth.fail(); }
     ls.set(LKEY, null); ls.set('pulso.kicked', null);
     let p;
-    try { p = await CloudAuth.loadProfile(res.data.user.id); } catch (e) { return {ok: false, offline: true}; }
+    try { p = await CloudAuth.loadProfile(res.data.user.id); }
+    catch (e) { console.error('Pulso: perfil', e); try { await sb.auth.signOut(); } catch (x) {} return isNetwork(e) ? {ok: false, offline: true} : {ok: false, profileError: [e.code, e.message].filter(Boolean).join(': ')}; }
     if (!p) return {ok: false, noProfile: true};
     Sync.state = 'ok'; Uso.add(0, 0, 1); Sync.subscribe(); Sync.flush(); Sync.pull();
     return {ok: true, user: CloudAuth.me};
@@ -1098,7 +1101,10 @@ function viewLogin() {
     if (r.ok) { ls.set('pulso.lastUser', r.user.usuario); toast(`Hola, ${r.user.nombre.split(' ')[0]}`); if (location.hash === '#/inicio') render(); else location.hash = '#/inicio'; return; }
     f.clave.value = ''; f.clave.focus();
     err.textContent = r.insecure ? 'Abre la app desde una dirección segura (https) para poder entrar.'
-      : r.offline ? 'Sin conexión. Necesitas internet para entrar.'
+      : r.noLib ? 'No se pudo cargar la librería de Supabase (cdn.jsdelivr.net). Recarga la página; si sigue igual, revisa si una extensión o la red la bloquea.'
+      : r.offline ? (navigator.onLine ? 'No se pudo conectar con tu proyecto de Supabase. Revisa la URL en config.js y que el proyecto no esté pausado.' : 'Sin conexión. Necesitas internet para entrar.')
+      : r.profileError ? `Usuario y contraseña correctos, pero la base de datos respondió: «${r.profileError}». Ejecuta permisos.sql en Supabase (SQL Editor) y vuelve a intentar.`
+      : r.dbError ? `No se pudo entrar: ${r.dbError}`
       : r.noProfile ? 'Tu cuenta existe pero no está habilitada en Pulso. Habla con el administrador.'
       : r.lock ? `Demasiados intentos. Espera ${r.lock} segundos y vuelve a intentarlo.`
       : `Usuario o contraseña incorrectos. ${r.left === 1 ? 'Te queda 1 intento' : `Te quedan ${r.left} intentos`} antes de una pausa.`;
