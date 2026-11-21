@@ -678,7 +678,7 @@ const J = {
     placeholder: !!r.por_identificar, idsAnteriores: r.ids_anteriores || []}),
 };
 const C = {
-  toRow: c => ({id: c.id, fecha: c.fecha, servicio: nz(c.servicio), tema: nz(c.tema), ponente: nz(c.ponente), notas: nz(c.notas),
+  toRow: c => ({id: c.id, fecha: c.fecha, servicio: SERVICIO, tema: nz(c.tema), ponente: nz(c.ponente), notas: nz(c.notas),
     registrado_por: UUID_RE.test(c.registradoPorId || '') ? c.registradoPorId : null, registrado_por_nombre: nz(c.registradoPor)}),
   fromRow: r => ({id: r.id, fecha: r.fecha, servicio: r.servicio || '', tema: r.tema || '', ponente: r.ponente || '', notas: r.notas || '',
     registradoPor: r.registrado_por_nombre || '', registradoPorId: r.registrado_por || ''}),
@@ -807,6 +807,7 @@ const Sync = {
         settings: Object.assign(defaults().settings, aj.data ? {grupo: aj.data.grupo, servicio: aj.data.servicio || '', riesgo: aj.data.riesgo, inactivo: aj.data.inactivo} : {})};
       Sync.queue.forEach(op => { const f = applyOp[op.t]; if (f) f(d, op); });
       data = d; DB.persist(); Sync.lastPull = Date.now();
+      if (Auth.isSuper()) unificarServicio();
       if (!Sync.queue.length) Sync.state = 'ok';
       softRender();
       Uso.report();
@@ -983,12 +984,23 @@ const ESTADOS = {
 const ORDER = ['constante', 'ocasional', 'nuevo', 'riesgo', 'inactivo'];
 let cache = new Map();
 function invalidate() { cache = new Map(); }
-const servicios = () => [...new Set(data.classes.map(c => c.servicio).filter(Boolean))].sort();
+// Un solo servicio: todas las clases cuentan juntas (sin filtro ni comparación por servicio).
+const SERVICIO = 'Segundo';
+const servicios = () => [];
+// Pasa a SERVICIO las clases guardadas con otro servicio (p. ej. Tercero), una sola vez.
+function unificarServicio() {
+  const otras = data.classes.filter(c => c.servicio !== SERVICIO);
+  if (!otras.length) return 0;
+  otras.forEach(c => { c.servicio = SERVICIO; });
+  DB.persist();
+  Sync.push({t: 'upC', rows: otras.map(C.toRow)});
+  return otras.length;
+}
 
-function stats(servicio) {
-  const key = servicio || 'Todos';
+function stats() {
+  const key = 'Todos';
   if (cache.has(key)) return cache.get(key);
-  const classes = data.classes.filter(c => key === 'Todos' || c.servicio === key).slice().sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
+  const classes = data.classes.slice().sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
   const n = classes.length;
   const att = new Map();
   classes.forEach((c, i) => c.asistentes.forEach(id => { if (!att.has(id)) att.set(id, []); att.get(id).push(i); }));
@@ -1031,7 +1043,7 @@ const badge = e => `<span class="badge b-${e}">${ESTADOS[e].label}</span>`;
    Estado de la interfaz y router
    ========================================================= */
 const ui = {periodo: '3m', servicio: null, filtro: 'todos', q: '', orden: 'pct', rq: '', rsort: 'frecuentes', showInactive: false, cq: ''};
-const curServicio = () => ui.servicio ?? (data.settings.servicio && servicios().includes(data.settings.servicio) ? data.settings.servicio : 'Todos');
+const curServicio = () => 'Todos';
 
 const routes = [
   [/^#\/(inicio)?$/, viewHome, 'inicio'],
@@ -1392,37 +1404,32 @@ function studentSheet(id, opts = {}) {
    TOMAR LISTA
    ========================================================= */
 function viewListStart() {
-  const serv = data.settings.servicio || servicios()[0] || '';
-  const today = data.classes.find(c => c.fecha === todayISO() && (!serv || c.servicio === serv));
+  const today = data.classes.find(c => c.fecha === todayISO());
   if (today) { location.replace('#/lista/' + today.id); return; }
   const recent = data.classes.slice().sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 3);
   setView(topbar('Tomar lista', 'Primero, los datos de la clase') + `
     <form id="cform" class="panel" autocomplete="off">
-      ${classFields({fecha: todayISO(), servicio: serv})}
+      ${classFields({fecha: todayISO()})}
       <button class="btn hl block" type="submit" style="margin-top:20px">${ic('check')}Empezar a marcar</button>
     </form>
     ${recent.length ? `<section class="section"><h2>O continúa una lista reciente</h2><div class="list" style="margin-top:10px">${recent.map(classRow).join('')}</div></section>` : ''}`);
   $('#cform').addEventListener('submit', async e => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target)); Object.keys(f).forEach(k => f[k] = String(f[k]).trim());
-    const me = Auth.session(); const c = await DB.saveClass(Object.assign(f, {asistentes: [], registradoPor: me.nombre, registradoPorId: me.uid}));
+    const me = Auth.session(); const c = await DB.saveClass(Object.assign(f, {servicio: SERVICIO, asistentes: [], registradoPor: me.nombre, registradoPorId: me.uid}));
     location.hash = '#/lista/' + c.id;
   });
 }
 function classFields(c) {
-  const servs = servicios();
   return `
-    <div class="grid2">
-      <label class="field" style="margin-top:0"><span>Fecha</span><input class="input" type="date" name="fecha" value="${esc(c.fecha || todayISO())}" required></label>
-      <label class="field" style="margin-top:0"><span>Servicio</span><input class="input" name="servicio" list="servs" value="${esc(c.servicio || '')}" placeholder="Segundo"><datalist id="servs">${servs.map(s => `<option value="${esc(s)}">`).join('')}</datalist></label>
-    </div>
+    <label class="field" style="margin-top:0"><span>Fecha</span><input class="input" type="date" name="fecha" value="${esc(c.fecha || todayISO())}" required></label>
     <label class="field"><span>Tema</span><input class="input" name="tema" value="${esc(c.tema || '')}" placeholder="¿De qué se habló hoy?"></label>
     <label class="field"><span>Quién dio la clase</span><input class="input" name="ponente" value="${esc(c.ponente || '')}" placeholder="Opcional"></label>`;
 }
 function viewRoster(id) {
   const c = DB.cls(id);
   if (!c) { location.replace('#/lista'); return; }
-  setView(topbar(esc(c.tema || 'Lista de asistencia'), `${fmtLong(c.fecha)}${c.servicio ? `, ${esc(c.servicio)} servicio` : ''}`, backBtn('#/clase/' + c.id), `<a class="btn primary" style="min-height:40px;padding:0 16px" href="#/clase/${c.id}">Listo</a>`).replace('class="top"', 'class="top" style="position:static"') + `
+  setView(topbar(esc(c.tema || 'Lista de asistencia'), fmtLong(c.fecha), backBtn('#/clase/' + c.id), `<a class="btn primary" style="min-height:40px;padding:0 16px" href="#/clase/${c.id}">Listo</a>`).replace('class="top"', 'class="top" style="position:static"') + `
     <div class="roster-bar">
       <div class="count-line"><span><span class="big num" id="pcount">${c.asistentes.length}</span> <span class="of">presentes</span></span><span class="of" id="pof"></span></div>
       <div class="search"><label class="sr" for="rq">Buscar en la lista</label>${ic('search')}<input id="rq" class="input" type="search" placeholder="Buscar nombre" value="${esc(ui.rq)}" autocomplete="off"></div>
@@ -1462,7 +1469,7 @@ function drawRoster(c) {
 function classRow(c) {
   const max = Math.max(1, ...data.classes.map(x => x.asistentes.length));
   return `<a class="item" href="#/clase/${c.id}"><div class="date-block"><b class="num">${dateOf(c.fecha).getDate()}</b><small>${fmt(c.fecha, {weekday: 'short'}).replace('.', '')}</small></div>
-    <div class="body"><div class="name">${esc(c.tema || 'Clase sin tema')}</div><div class="meta">${[fmt(c.fecha, {month: 'long'}), c.servicio ? esc(c.servicio) + ' servicio' : '', c.ponente ? 'con ' + esc(c.ponente) : ''].filter(Boolean).join(', ')}</div></div>
+    <div class="body"><div class="name">${esc(c.tema || 'Clase sin tema')}</div><div class="meta">${[fmt(c.fecha, {month: 'long'}), c.ponente ? 'con ' + esc(c.ponente) : ''].filter(Boolean).join(', ')}</div></div>
     <div class="end"><span class="cnt num">${c.asistentes.length}</span><span class="mini"><span style="width:${c.asistentes.length / max * 100}%"></span></span></div></a>`;
 }
 function viewClasses() {
@@ -1493,7 +1500,7 @@ function viewClass(id) {
   const avgAll = avg(ranks);
   const personChip = s => `<a class="person" href="#/joven/${s.id}">${avatar(s)}${esc(shortName(s))}</a>`;
   setView(topbar('', '', backBtn('#/clases'), `<button class="icon-btn" data-act="editClass" data-id="${c.id}" aria-label="Editar clase">${ic('edit')}</button>`) + `
-    <p class="muted" style="text-transform:capitalize">${fmtLong(c.fecha)}${c.servicio ? `, ${esc(c.servicio)} servicio` : ''}</p>
+    <p class="muted" style="text-transform:capitalize">${fmtLong(c.fecha)}</p>
     <h2 style="font-size:28px;font-weight:800;margin-top:4px;letter-spacing:-.02em">${esc(c.tema || 'Clase sin tema')}</h2>
     ${c.ponente ? `<p class="muted" style="margin-top:4px">Con ${esc(c.ponente)}</p>` : ''}
     <div class="kpis">
@@ -1547,7 +1554,7 @@ function viewMore() {
     <section class="section"><h2>Reportes y copias</h2>
     <div class="list menu" style="margin-top:10px">
       ${sup ? `<a class="item" href="#/importar"><span class="ic">${ic('upload')}</span><div class="body"><div class="name">Importar datos</div><div class="meta">Jóvenes y clases desde archivos CSV</div></div>${ic('chev', 'class="chev"')}</a>` : ''}
-      <a class="item" href="#/estadisticas"><span class="ic">${ic('chart')}</span><div class="body"><div class="name">Panel de estadísticas</div><div class="meta">Promedios, edades, cursos y servicios</div></div>${ic('chev', 'class="chev"')}</a>
+      <a class="item" href="#/estadisticas"><span class="ic">${ic('chart')}</span><div class="body"><div class="name">Panel de estadísticas</div><div class="meta">Promedios, edades y cursos</div></div>${ic('chev', 'class="chev"')}</a>
       <button class="item" data-act="exportXLSX"><span class="ic">${ic('file')}</span><div class="body"><div class="name">Descargar Excel de jóvenes</div><div class="meta">Datos, asistencia por clase, clases y resumen</div></div></button>
       ${sup ? `<button class="item" data-act="exportJSON"><span class="ic">${ic('download')}</span><div class="body"><div class="name">Descargar copia de seguridad</div><div class="meta">Todo en un archivo para restaurar después</div></div></button>
       <label class="item" style="cursor:pointer"><span class="ic">${ic('upload')}</span><div class="body"><div class="name">Restaurar copia de seguridad</div><div class="meta">Reemplaza los datos actuales</div></div><input type="file" accept=".json,application/json" id="restore" class="sr"></label>` : ''}
@@ -1556,7 +1563,6 @@ function viewMore() {
     ${sup ? `<section class="section"><h2>Ajustes del grupo</h2>
       <form id="setform" class="panel" style="margin-top:10px">
         <label class="field" style="margin-top:0"><span>Nombre del grupo</span><input class="input" name="grupo" value="${esc(S.grupo)}"></label>
-        <label class="field"><span>Servicio que más usan</span><select class="input" name="servicio"><option value="">Ninguno en particular</option>${servs.map(s => `<option ${s === S.servicio ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></label>
         <div class="grid2">
           <label class="field"><span>En riesgo tras</span><select class="input" name="riesgo">${[2, 3, 4, 5].map(v => `<option value="${v}" ${v == S.riesgo ? 'selected' : ''}>${v} ausencias</option>`).join('')}</select></label>
           <label class="field"><span>Inactivo tras</span><select class="input" name="inactivo">${[6, 8, 10, 12].map(v => `<option value="${v}" ${v == S.inactivo ? 'selected' : ''}>${v} ausencias</option>`).join('')}</select></label>
@@ -1575,7 +1581,7 @@ function viewMore() {
   if (!sup) return;
   $('#setform').addEventListener('submit', async e => {
     e.preventDefault(); const f = Object.fromEntries(new FormData(e.target));
-    await DB.saveSettings({grupo: f.grupo.trim() || 'Grupo de jóvenes', servicio: f.servicio, riesgo: Number(f.riesgo), inactivo: Number(f.inactivo)});
+    await DB.saveSettings({grupo: f.grupo.trim() || 'Grupo de jóvenes', riesgo: Number(f.riesgo), inactivo: Number(f.inactivo)});
     ui.servicio = null; toast('Ajustes guardados');
   });
   $('#restore').addEventListener('change', async e => {
@@ -1918,8 +1924,8 @@ function studentsWorkbook() {
   const head = ['Joven', ...classes.map(c => fmt(c.fecha, {day: '2-digit', month: '2-digit', year: '2-digit'})), 'Total'];
   const asis = [head, ...all.map(s => { const p = per.get(s.id); return [fullName(s), ...classes.map((c, i) => p.set.has(i) ? {v: 1, s: 6} : null), p.asistidas]; })];
   const firstBy = new Map(); classes.forEach((c, i) => c.asistentes.forEach(id => { if (!firstBy.has(id)) firstBy.set(id, i); }));
-  const clas = [['Fecha', 'Servicio', 'Tema', 'Quién la dio', 'Lista tomada por', 'Asistentes', 'Primera vez', 'Notas'],
-    ...classes.map((c, i) => [{d: c.fecha}, c.servicio || '', c.tema || '', c.ponente || '', c.registradoPor || '', c.asistentes.length, c.asistentes.filter(id => firstBy.get(id) === i && i > 0).length, c.notas || ''])];
+  const clas = [['Fecha', 'Tema', 'Quién la dio', 'Lista tomada por', 'Asistentes', 'Primera vez', 'Notas'],
+    ...classes.map((c, i) => [{d: c.fecha}, c.tema || '', c.ponente || '', c.registradoPor || '', c.asistentes.length, c.asistentes.filter(id => firstBy.get(id) === i && i > 0).length, c.notas || ''])];
   const cnt = Object.fromEntries(ORDER.map(e => [e, real.filter(s => per.get(s.id)?.estado === e).length]));
   const last8 = classes.slice(-8).map(c => c.asistentes.length);
   const res = [
@@ -1938,7 +1944,7 @@ function studentsWorkbook() {
   return buildXLSX([
     {name: 'Jóvenes', rows: jov, widths: [18, 22, 7, 13, 9, 22, 18, 13, 12, 11, 10, 12, 12, 10, 10, 13, 13, 30, 24]},
     {name: 'Asistencia por clase', rows: asis, widths: [28, ...classes.map(() => 9), 8], freezeCol: 1},
-    {name: 'Clases', rows: clas, widths: [12, 11, 40, 22, 20, 11, 11, 30]},
+    {name: 'Clases', rows: clas, widths: [12, 40, 22, 20, 11, 11, 30]},
     {name: 'Resumen', rows: res, widths: [42, 14], header: false},
   ]);
 }
@@ -2189,7 +2195,6 @@ const FIELDS = {
     ['id', 'ID único', ['uniqueid', 'id', '_id']],
     ['fecha', 'Fecha', ['fecha', 'date', 'fechaclase']],
     ['tema', 'Tema', ['tema', 'nombre', 'titulo', 'name']],
-    ['servicio', 'Servicio', ['servicio', 'grupo', 'jornada']],
     ['ponente', 'Quién dio la clase', ['ponente', 'ponentes', 'maestro', 'profesor', 'lider']],
     ['asistentes', 'Asistentes (IDs)', ['alumnos', 'asistentes', 'estudiantes', 'jovenes']],
   ],
@@ -2258,7 +2263,7 @@ function buildImport() {
       const asistentes = [...new Set(g(r, 'asistentes').split(/[,;\s]+/).map(x => x.trim()).filter(Boolean))];
       asistentes.forEach(a => { if (known.has(a)) out.linked = true; else if (!ph.has(a)) ph.set(a, {id: a, nombres: 'Por identificar', apellidos: '…' + a.slice(-4), placeholder: true}); });
       out.asist += asistentes.length;
-      out.classes.push({id: g(r, 'id') || uid(), fecha, tema: g(r, 'tema').replace(/\s+/g, ' '), servicio: g(r, 'servicio'), ponente: g(r, 'ponente'), asistentes});
+      out.classes.push({id: g(r, 'id') || uid(), fecha, tema: g(r, 'tema').replace(/\s+/g, ' '), servicio: SERVICIO, ponente: g(r, 'ponente'), asistentes});
     }
     out.placeholders = ph.size;
     out.students.push(...ph.values());
@@ -2281,7 +2286,7 @@ function demoData() {
     const b = new Date(2026 - 10 - Math.floor(rnd() * 5), Math.floor(rnd() * 12), 1 + Math.floor(rnd() * 27));
     return {id: 'demo' + i, nombres: n, apellidos: A[Math.floor(rnd() * A.length)] + ' ' + A[Math.floor(rnd() * A.length)], fechaNacimiento: isoOf(b), acudiente: P[Math.floor(rnd() * P.length)] + ' ' + A[Math.floor(rnd() * A.length)], telefono: rnd() < .18 ? '' : '3' + String(Math.floor(1e8 + rnd() * 9e8)).slice(0, 9), curso: `${Math.min(11, Math.max(4, 2026 - b.getFullYear() - 5))}°`, fechaIngreso: dates[join], _p: .25 + rnd() * .7, _j: join, _d: drop};
   });
-  const classes = dates.map((f, i) => ({id: 'dc' + i, fecha: f, tema: T[i % T.length], servicio: i % 9 === 4 ? 'Tercero' : 'Segundo', ponente: i % 3 ? 'Yesid y Leidy' : 'Jose y Leo', asistentes: students.filter(s => i >= s._j && i < s._d && rnd() < s._p).map(s => s.id)}));
+  const classes = dates.map((f, i) => ({id: 'dc' + i, fecha: f, tema: T[i % T.length], servicio: SERVICIO, ponente: i % 3 ? 'Yesid y Leidy' : 'Jose y Leo', asistentes: students.filter(s => i >= s._j && i < s._d && rnd() < s._p).map(s => s.id)}));
   students.forEach(s => { delete s._p; delete s._j; delete s._d; });
   return {students, classes, settings: {grupo: 'Jóvenes Segundo servicio', servicio: 'Segundo', riesgo: 3, inactivo: 8}};
 }
@@ -2357,7 +2362,7 @@ const ACT = {
     if (imp.mode === 'merge' && (data.students.length || data.classes.length)) await DB.mergeAll(payload);
     else await DB.replaceAll(Object.assign({settings: data.settings}, payload));
     const sv = servicios(); if (!data.settings.servicio && sv.length) { const top = sv.map(s => [s, data.classes.filter(c => c.servicio === s).length]).sort((a, b) => b[1] - a[1])[0][0]; await DB.saveSettings({servicio: top}); }
-    imp.s = imp.c = null; ui.servicio = null;
+    unificarServicio(); imp.s = imp.c = null; ui.servicio = null;
     toast(`Importados ${plan.students.length} registros y ${plan.classes.length} clases`); location.hash = '#/inicio';
   },
   exportXLSX: async el => {
@@ -2379,8 +2384,8 @@ const ACT = {
     download(`pulso-jovenes-${todayISO()}.csv`, toCSV([['ID', 'Nombres', 'Apellidos', 'Edad', 'Fecha de nacimiento', 'Acudiente', 'Celular', 'Fecha de ingreso', 'Estado', 'Clases asistidas', 'Clases desde ingreso', '% asistencia', 'Ausencias seguidas', 'Última asistencia'],
       ...data.students.map(s => { const p = st.per.get(s.id); return [s.id, s.nombres, s.apellidos, ageOf(s) ?? '', s.fechaNacimiento || '', s.acudiente || '', s.telefono || '', s.fechaIngreso || '', s.placeholder ? 'Por identificar' : ESTADOS[p.estado].label, p.asistidas, p.relevant, Math.round(p.pct * 100), p.seguidas, p.lastFecha || '']; })]), 'text/csv');
   },
-  exportClasses: () => download(`pulso-clases-${todayISO()}.csv`, toCSV([['ID', 'Fecha', 'Servicio', 'Tema', 'Quién la dio', 'Asistentes', 'Nombres'],
-    ...data.classes.slice().sort((a, b) => a.fecha.localeCompare(b.fecha)).map(c => [c.id, c.fecha, c.servicio || '', c.tema || '', c.ponente || '', c.asistentes.length, c.asistentes.map(id => { const s = DB.student(id); return s ? fullName(s) : id; }).join(', ')])]), 'text/csv'),
+  exportClasses: () => download(`pulso-clases-${todayISO()}.csv`, toCSV([['ID', 'Fecha', 'Tema', 'Quién la dio', 'Asistentes', 'Nombres'],
+    ...data.classes.slice().sort((a, b) => a.fecha.localeCompare(b.fecha)).map(c => [c.id, c.fecha, c.tema || '', c.ponente || '', c.asistentes.length, c.asistentes.map(id => { const s = DB.student(id); return s ? fullName(s) : id; }).join(', ')])]), 'text/csv'),
   demo: () => Auth.isSuper() && !CLOUD && confirmSheet('¿Cargar datos de ejemplo?', 'Verás la app con 42 jóvenes y 26 clases inventados. Reemplaza lo que haya en este dispositivo.', 'Cargar ejemplo', async () => { ui.servicio = null; await DB.replaceAll(demoData()); toast('Datos de ejemplo cargados'); location.hash = '#/inicio'; render(); }),
   wipe: () => Auth.isSuper() && confirmSheet('¿Borrar todos los datos?', CLOUD ? 'Se eliminarán todos los jóvenes y clases de la base de datos, para todos los profesores. Descarga una copia de seguridad antes. No se puede deshacer.' : 'Se eliminarán todos los jóvenes y clases de este dispositivo. Descarga una copia antes si la necesitas.', 'Borrar todo', async () => { await DB.replaceAll(defaults()); ui.servicio = null; toast('Datos borrados'); location.hash = '#/inicio'; render(); }, true),
   install: async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; render(); },
@@ -2407,6 +2412,7 @@ document.addEventListener('click', e => {
     document.addEventListener('visibilitychange', () => { if (!document.hidden && Auth.session()) { Sync.flush(); if (Date.now() - Sync.lastPull > 15000) Sync.pull(); } });
     if (sb) sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT' && CloudAuth.me && navigator.onLine) { CloudAuth.me = null; Sync.ui(); render(); } });
   }
+  if (!CLOUD) unificarServicio();
   render(); Sync.ui();
   setTimeout(downloadsNs, 0);
 })();

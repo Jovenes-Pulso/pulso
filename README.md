@@ -25,7 +25,7 @@ settings: grupo, servicio, riesgo, inactivo
 ## Estadísticas y Excel
 - Panel en Inicio > "Panel de estadísticas": periodo (8 clases, 3 meses, año, todo) y servicio;
   promedio por clase, % del grupo activo, jóvenes distintos, nuevos, edades, asistencia por curso
-  y por edad, por servicio, por quién dio la clase, los que más vinieron y qué tan completos están los datos.
+  y por edad, por quién dio la clase, los que más vinieron y qué tan completos están los datos.
 - Excel (.xlsx) generado en el celular, sin librerías: hojas Jóvenes, Asistencia por clase, Clases y Resumen.
   Botón en Jóvenes, en Estadísticas y en Más. Los jóvenes sin celular aparecen en rojo.
 - Alerta en Inicio de jóvenes sin celular de acudiente, filtro "Sin celular" en Jóvenes y aviso en cada perfil.
